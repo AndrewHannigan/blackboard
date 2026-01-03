@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Blackboard</title>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --fg: #e0e0e0;
+      --toggle-bg: #2a2a2a;
+      --toggle-hover: #3a3a3a;
+    }
+
+    :root.light {
+      --bg: #faf9f7;
+      --fg: #1a1a1a;
+      --toggle-bg: #e8e6e3;
+      --toggle-hover: #dbd8d4;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      transition: background 0.3s ease;
+    }
+
+    #editor {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      border: none;
+      outline: none;
+      resize: none;
+      background: var(--bg);
+      color: var(--fg);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    #dark-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 50%;
+      background: var(--toggle-bg);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.2s ease;
+      z-index: 100;
+    }
+
+    #dark-toggle:hover {
+      background: var(--toggle-hover);
+      transform: scale(1.08);
+    }
+
+    #dark-toggle svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--fg);
+      transition: fill 0.3s ease;
+    }
+
+    .sun-icon { display: block; }
+    .moon-icon { display: none; }
+
+    :root.light .sun-icon { display: none; }
+    :root.light .moon-icon { display: block; }
+  </style>
+  <script>
+    if (localStorage.getItem('blackboard-theme') === 'light') {
+      document.documentElement.classList.add('light');
+    }
+  </script>
+</head>
+<body>
+  <button id="dark-toggle" title="Toggle dark mode">
+    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <textarea id="editor" autofocus spellcheck="false"></textarea>
+  <script>
+    const editor = document.getElementById('editor');
+    const KEY = 'blackboard-content';
+    const THEME_KEY = 'blackboard-theme';
+
+    editor.value = localStorage.getItem(KEY) || '';
+
+    editor.addEventListener('input', () => {
+      localStorage.setItem(KEY, editor.value);
+    });
+
+    // Dark mode toggle
+    const toggle = document.getElementById('dark-toggle');
+    const root = document.documentElement;
+
+    toggle.addEventListener('click', () => {
+      root.classList.toggle('light');
+      localStorage.setItem(THEME_KEY, root.classList.contains('light') ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>
