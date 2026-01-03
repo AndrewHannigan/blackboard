@@ -1,55 +1,45 @@
-# Whiteboard
+# Blackboard
 
-Whiteboard is the minimum text editor.
+Blackboard is the minimum text editor. 
 
-If you close Whiteboard and reopen it, the same text will be here.
+It's for editing scratch text on the fly, and that's about it.
 
-It's for editing text on the fly, and that's about it.
+Text persists between sessions. 
 
-No files.
-No formatting.
-No exit confirmations.
-No donation requests.
-No menus.
-No syncing.
+Write a SQL snippet, draft a slack message, modify a unix command, etc.
 
-All you do 
-    Is edit the text
-        In front of you.
 
-```
-_      `-._     `-.     `.   \      :      /   .'     .-'     _.-'      _
- `--._     `-._    `-.    `.  `.    :    .'  .'    .-'    _.-'     _.--'
-      `--._    `-._   `-.   `.  \   :   /  .'   .-'   _.-'    _.--'
-`--.__     `--._   `-._  `-.  `. `. : .' .'  .-'  _.-'   _.--'     __.--'
-__    `--.__    `--._  `-._ `-. `. \:/ .' .-' _.-'  _.--'    __.--'    __
-  `--..__   `--.__   `--._ `-._`-.`_=_'.-'_.-' _.--'   __.--'   __..--'
---..__   `--..__  `--.__  `--._`-q(-_-)p-'_.--'  __.--'  __..--'   __..--
-      ``--..__  `--..__ `--.__ `-'_) (_`-' __.--' __..--'  __..--''
-...___        ``--..__ `--..__`--/__/  \--'__..--' __..--''        ___...
-      ```---...___    ``--..__`_(<_   _/)_'__..--''    ___...---'''
-```-----....._____```---...___(__\_\_|_/__)___...---'''_____.....-----'''
-```
+No startup menus.  
+No exit confirmations.  
+No open/save.  
+No donation requests.  
+No formatting.  
+No syncing.  
+
+Just a little blackboard on your laptop.
+
+<img src="assets/image.png" alt="Blackboard app screenshot" width="50%">
+
 ## Install (macOS)
 
 ### Binary
-1. Download the latest `.dmg` from [Releases](https://github.com/AndrewHannigan/whiteboard/releases)
-2. Open the DMG and drag Whiteboard to Applications
+1. Download the latest `.dmg` from [Releases](https://github.com/AndrewHannigan/blackboard/releases)
+2. Open the DMG and drag Blackboard to Applications
 3. Run this once in a terminal to bypass Gatekeeper
    ```bash
-   xattr -cr /Applications/Whiteboard.app
+   xattr -cr /Applications/Blackboard.app
    ```
-4. Open Whiteboard
+4. Open Blackboard
 
 
 ### Homebrew
 
-1. Run `brew install --cask andrewhannigan/tap/whiteboard`
+1. Run `brew install --cask andrewhannigan/tap/blackboard`
 2. Run this once in a terminal to bypass Gatekeeper
    ```bash
-   xattr -cr /Applications/Whiteboard.app
+   xattr -cr /Applications/Blackboard.app
    ```
-3. Open Whiteboard
+3. Open Blackboard
 
 ## What it does
 

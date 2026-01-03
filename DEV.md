@@ -14,4 +14,4 @@ npm install
 npm run install-local
 ```
 
-This creates `dist/mac/Whiteboard.app` - drag it to Applications or launch directly. To update after code changes, run `npm run install-local` again.
+This creates `dist/mac/Blackboard.app` - drag it to Applications or launch directly. To update after code changes, run `npm run install-local` again.
