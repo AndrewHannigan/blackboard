@@ -5,7 +5,11 @@ function createWindow() {
     width: 1200,
     height: 800,
     show: false,
-    backgroundColor: '#0d0d0d'
+    backgroundColor: '#0d0d0d',
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false
+    }
   });
 
   win.once('ready-to-show', () => {

@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Blackboard</title>
+  <link rel="stylesheet" href="./node_modules/highlight.js/styles/github-dark.css" id="hljs-dark">
+  <link rel="stylesheet" href="./node_modules/highlight.js/styles/github.css" id="hljs-light" disabled>
   <style>
     :root {
       --bg: #0d0d0d;
@@ -27,7 +29,16 @@
       transition: background 0.3s ease;
     }
 
-    #editor {
+    #editor-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #editor, #highlight-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       padding: 12px;
@@ -35,11 +46,56 @@
       font-size: 13px;
       line-height: 1.7;
       border: none;
+      margin: 0;
+      box-sizing: border-box;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    #editor {
       outline: none;
       resize: none;
+      background: transparent;
+      color: transparent;
+      caret-color: var(--fg);
+      z-index: 2;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #editor::selection {
+      background: rgba(100, 100, 255, 0.3);
+    }
+
+    #editor::-moz-selection {
+      background: rgba(100, 100, 255, 0.3);
+    }
+
+    #highlight-layer {
+      z-index: 1;
+      pointer-events: none;
       background: var(--bg);
       color: var(--fg);
+      overflow: hidden;
       transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    #highlight-layer code {
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      background: transparent !important;
+      padding: 0 !important;
+      display: block;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    /* Override highlight.js background */
+    #highlight-layer code.hljs {
+      background: transparent !important;
+      padding: 0 !important;
     }
 
     #dark-toggle {
@@ -76,6 +132,27 @@
 
     :root.light .sun-icon { display: none; }
     :root.light .moon-icon { display: block; }
+
+    /* Language indicator */
+    #language-indicator {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      padding: 4px 10px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      background: var(--toggle-bg);
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease, background 0.3s ease;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #language-indicator.visible {
+      opacity: 0.7;
+    }
   </style>
   <script>
     if (localStorage.getItem('blackboard-theme') === 'light') {
@@ -88,25 +165,173 @@
     <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>
-  <textarea id="editor" autofocus spellcheck="false"></textarea>
+  <div id="editor-container">
+    <pre id="highlight-layer"><code></code></pre>
+    <textarea id="editor" autofocus spellcheck="false"></textarea>
+  </div>
+  <div id="language-indicator"></div>
   <script>
+    const hljs = require('highlight.js');
+    
+    // Limit auto-detection to these languages only
+    hljs.configure({
+      languages: [
+        'javascript',
+        'typescript',
+        'python',
+        'html',
+        'css',
+        'json',
+        'bash',
+        'shell',
+        'sql',
+        'go',
+        'rust',
+        'java',
+        'c',
+        'cpp',
+        'ruby',
+        'php',
+        'swift',
+        'kotlin',
+        'yaml',
+        'markdown',
+        'scala',
+        'haskell',
+        'lua',
+        'r',
+        'perl'
+      ]
+    });
+    
     const editor = document.getElementById('editor');
+    const highlightLayer = document.getElementById('highlight-layer').querySelector('code');
+    const languageIndicator = document.getElementById('language-indicator');
     const KEY = 'blackboard-content';
     const THEME_KEY = 'blackboard-theme';
 
+    // Minimum relevance score to apply syntax highlighting
+    // Higher = more confident detection required
+    const CONFIDENCE_THRESHOLD = 10;
+
+    // Escape HTML to prevent XSS and display issues
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Debounce function for performance
+    function debounce(fn, delay) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    // Track current detected language
+    let currentLanguage = null;
+
+    // Immediately update display (plain text or re-apply current highlighting)
+    function updateDisplayImmediate() {
+      const text = editor.value;
+      
+      if (!text.trim()) {
+        highlightLayer.innerHTML = '';
+        highlightLayer.className = '';
+        currentLanguage = null;
+        languageIndicator.classList.remove('visible');
+        return;
+      }
+
+      if (currentLanguage) {
+        // Re-apply known language highlighting immediately
+        try {
+          const result = hljs.highlight(text, { language: currentLanguage });
+          highlightLayer.innerHTML = result.value;
+        } catch (e) {
+          highlightLayer.innerHTML = escapeHtml(text);
+        }
+      } else {
+        // No language detected yet, show plain text
+        highlightLayer.innerHTML = escapeHtml(text);
+      }
+    }
+
+    // Expensive language detection (debounced)
+    function detectAndHighlight() {
+      const text = editor.value;
+      
+      if (!text.trim()) {
+        currentLanguage = null;
+        languageIndicator.classList.remove('visible');
+        return;
+      }
+
+      try {
+        const result = hljs.highlightAuto(text);
+        
+        if (result.relevance >= CONFIDENCE_THRESHOLD && result.language) {
+          currentLanguage = result.language;
+          highlightLayer.innerHTML = result.value;
+          highlightLayer.className = `hljs language-${result.language}`;
+          languageIndicator.textContent = result.language;
+          languageIndicator.classList.add('visible');
+        } else {
+          currentLanguage = null;
+          highlightLayer.innerHTML = escapeHtml(text);
+          highlightLayer.className = '';
+          languageIndicator.classList.remove('visible');
+        }
+      } catch (e) {
+        currentLanguage = null;
+        highlightLayer.innerHTML = escapeHtml(text);
+        highlightLayer.className = '';
+        languageIndicator.classList.remove('visible');
+      }
+    }
+
+    // Sync scroll between editor and highlight layer
+    function syncScroll() {
+      const pre = document.getElementById('highlight-layer');
+      pre.scrollTop = editor.scrollTop;
+      pre.scrollLeft = editor.scrollLeft;
+    }
+
+    // Debounced language detection
+    const debouncedDetect = debounce(detectAndHighlight, 300);
+
+    // Initialize
     editor.value = localStorage.getItem(KEY) || '';
+    detectAndHighlight();
 
     editor.addEventListener('input', () => {
       localStorage.setItem(KEY, editor.value);
+      updateDisplayImmediate();  // Instant text update
+      debouncedDetect();         // Delayed language detection
     });
+
+    editor.addEventListener('scroll', syncScroll);
 
     // Dark mode toggle
     const toggle = document.getElementById('dark-toggle');
     const root = document.documentElement;
+    const hljsDark = document.getElementById('hljs-dark');
+    const hljsLight = document.getElementById('hljs-light');
+
+    function updateThemeStyles() {
+      const isLight = root.classList.contains('light');
+      hljsDark.disabled = isLight;
+      hljsLight.disabled = !isLight;
+    }
+
+    updateThemeStyles();
 
     toggle.addEventListener('click', () => {
       root.classList.toggle('light');
       localStorage.setItem(THEME_KEY, root.classList.contains('light') ? 'light' : 'dark');
+      updateThemeStyles();
     });
   </script>
 </body>
