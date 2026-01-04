@@ -274,6 +274,49 @@
       pointer-events: none;
     }
 
+    /* SQL format button */
+    #sql-format {
+      padding: 4px 10px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 4px;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, background 0.2s ease, visibility 0.3s ease;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #sql-format:hover {
+      background: var(--toggle-hover);
+    }
+
+    #sql-format.visible {
+      opacity: 0.7;
+      visibility: visible;
+    }
+
+    #sql-format.visible:hover {
+      opacity: 1;
+    }
+
+    #sql-format svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+
+    #sql-format.formatting {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
     /* Language picker dropdown */
     #language-picker {
       position: fixed;
@@ -358,6 +401,10 @@
     <button id="ruff-format" title="Format with Ruff">
       <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
       <span>ruff</span>
+    </button>
+    <button id="sql-format" title="Format with sqlformat">
+      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      <span>sqlformat</span>
     </button>
     <button id="highlight-toggle" title="Toggle syntax highlighting">
       <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
@@ -542,6 +589,96 @@
     // Check for ruff on startup
     checkRuffAvailable();
 
+    // sqlformat availability
+    let sqlformatAvailable = false;
+    const sqlFormatBtn = document.getElementById('sql-format');
+
+    // Check if sqlformat is available on system
+    function checkSqlformatAvailable() {
+      const pathsToTry = [
+        process.env.HOME + '/.local/bin',
+        process.env.HOME + '/.pyenv/shims',
+        '/usr/local/bin',
+        '/opt/homebrew/bin'
+      ].join(':') + ':' + (process.env.PATH || '');
+
+      exec('sqlformat --version', { env: { ...process.env, PATH: pathsToTry } }, (error, stdout, stderr) => {
+        sqlformatAvailable = !error;
+        updateSqlFormatButton();
+      });
+    }
+
+    // Update sqlformat button visibility
+    function updateSqlFormatButton() {
+      const isSQL = currentLanguage === 'sql' || manualLanguage === 'sql';
+      if (sqlformatAvailable && isSQL && editor.value.trim()) {
+        sqlFormatBtn.classList.add('visible');
+      } else {
+        sqlFormatBtn.classList.remove('visible');
+      }
+    }
+
+    // Format code with sqlformat
+    function formatWithSqlformat() {
+      if (!sqlformatAvailable) return;
+      
+      const code = editor.value;
+      if (!code.trim()) return;
+
+      sqlFormatBtn.classList.add('formatting');
+      sqlFormatBtn.querySelector('span').textContent = '...';
+
+      const pathsToTry = [
+        process.env.HOME + '/.local/bin',
+        process.env.HOME + '/.pyenv/shims',
+        '/usr/local/bin',
+        '/opt/homebrew/bin'
+      ].join(':') + ':' + (process.env.PATH || '');
+
+      // sqlformat options: -r for reindent, -k upper for uppercase keywords
+      const sqlformat = spawn('sqlformat', ['-r', '-k', 'upper', '-'], {
+        env: { ...process.env, PATH: pathsToTry }
+      });
+
+      let formattedCode = '';
+      let errorOutput = '';
+
+      sqlformat.stdout.on('data', (data) => {
+        formattedCode += data.toString();
+      });
+
+      sqlformat.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      sqlformat.on('close', (exitCode) => {
+        sqlFormatBtn.classList.remove('formatting');
+        sqlFormatBtn.querySelector('span').textContent = 'sqlformat';
+
+        if (exitCode === 0 && formattedCode) {
+          const cursorPos = editor.selectionStart;
+          const ratio = cursorPos / code.length;
+          
+          editor.value = formattedCode;
+          localStorage.setItem(KEY, formattedCode);
+          
+          const newPos = Math.round(ratio * formattedCode.length);
+          editor.setSelectionRange(newPos, newPos);
+          
+          applyHighlighting();
+        }
+      });
+
+      sqlformat.stdin.write(code);
+      sqlformat.stdin.end();
+    }
+
+    // sqlformat button click handler
+    sqlFormatBtn.addEventListener('click', formatWithSqlformat);
+
+    // Check for sqlformat on startup
+    checkSqlformatAvailable();
+
     // Build the language picker dropdown
     function buildLanguagePicker() {
       languagePicker.innerHTML = '';
@@ -713,6 +850,7 @@
       languageIndicator.classList.add('visible');
       highlightToggle.classList.add('visible');
       updateRuffButton();
+      updateSqlFormatButton();
     }
 
     // Immediately update display (plain text or re-apply current highlighting)
