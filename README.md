@@ -8,12 +8,12 @@ There's no save mechanism - text just persists between sessions.
 
 Write a SQL snippet, draft a slack message, modify a unix command, etc.
 
-No tabs.
-No file browser.
+No tabs.  
+No file browser.  
 No startup menus.  
-No dialogs.
+No dialogs.  
 No exit confirmations.  
-No syncing.
+No syncing.  
 
 Just a little blackboard that's always the way you left it.
 
