@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+
+const http = require('http');
+
+const SOCKET_PORT = 45678;
+const SOCKET_HOST = '127.0.0.1';
+
+const command = process.argv[2];
+
+function handleError(err) {
+  if (err.code === 'ECONNREFUSED') {
+    console.error('Error: Blackboard is not running');
+  } else {
+    console.error(`Error: ${err.message}`);
+  }
+  process.exit(1);
+}
+
+function handleTimeout(req) {
+  req.destroy();
+  console.error('Error: Connection timed out');
+  process.exit(1);
+}
+
+function cmdIn() {
+  let input = '';
+  process.stdin.setEncoding('utf8');
+
+  process.stdin.on('data', (chunk) => {
+    input += chunk;
+  });
+
+  process.stdin.on('end', () => {
+    const req = http.request({
+      hostname: SOCKET_HOST,
+      port: SOCKET_PORT,
+      path: '/buffer',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Length': Buffer.byteLength(input)
+      },
+      timeout: 10000
+    }, (res) => {
+      res.resume();
+      res.on('end', () => {
+        if (res.statusCode !== 200) {
+          console.error(`Error: Server responded with ${res.statusCode}`);
+          process.exit(1);
+        }
+      });
+    });
+
+    req.on('error', handleError);
+    req.on('timeout', () => handleTimeout(req));
+    req.write(input);
+    req.end();
+  });
+}
+
+function cmdOut() {
+  const req = http.request({
+    hostname: SOCKET_HOST,
+    port: SOCKET_PORT,
+    path: '/buffer',
+    method: 'GET',
+    timeout: 2000
+  }, (res) => {
+    if (res.statusCode === 200) {
+      res.pipe(process.stdout);
+    } else {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        console.error(`Error: Server responded with ${res.statusCode}: ${data}`);
+        process.exit(1);
+      });
+    }
+  });
+
+  req.on('error', handleError);
+  req.on('timeout', () => handleTimeout(req));
+  req.end();
+}
+
+function cmdPing() {
+  const req = http.request({
+    hostname: SOCKET_HOST,
+    port: SOCKET_PORT,
+    path: '/ping',
+    method: 'GET',
+    timeout: 2000
+  }, (res) => {
+    res.resume();
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        console.log('Blackboard is running');
+      } else {
+        console.error(`Error: Server responded with ${res.statusCode}`);
+        process.exit(1);
+      }
+    });
+  });
+
+  req.on('error', handleError);
+  req.on('timeout', () => handleTimeout(req));
+  req.end();
+}
+
+function showUsage() {
+  console.log(`Usage: bb [command]
+
+Commands:
+  cat   Print buffer contents
+  ping  Check if Blackboard is running
+
+Pipe input to write:
+  echo "hello" | bb
+  bb < file.txt`);
+}
+
+switch (command) {
+  case 'cat':
+    cmdOut();
+    break;
+  case 'ping':
+    cmdPing();
+    break;
+  case undefined:
+    // No command: if stdin is piped, write to buffer; otherwise show usage
+    if (process.stdin.isTTY) {
+      showUsage();
+    } else {
+      cmdIn();
+    }
+    break;
+  default:
+    showUsage();
+    process.exit(1);
+}
+
