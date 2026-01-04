@@ -135,9 +135,6 @@
 
     /* Language indicator */
     #language-indicator {
-      position: fixed;
-      bottom: 16px;
-      right: 16px;
       padding: 4px 10px;
       font-family: Monaco, Menlo, monospace;
       font-size: 11px;
@@ -146,7 +143,6 @@
       border-radius: 4px;
       opacity: 0;
       transition: opacity 0.3s ease, background 0.2s ease;
-      z-index: 100;
       cursor: pointer;
       user-select: none;
     }
@@ -161,6 +157,65 @@
 
     #language-indicator.visible:hover {
       opacity: 1;
+    }
+
+    /* Status bar container */
+    #status-bar {
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 100;
+    }
+
+    /* Highlight toggle button */
+    #highlight-toggle {
+      padding: 4px 8px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease, background 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #highlight-toggle:hover {
+      background: var(--toggle-hover);
+    }
+
+    #highlight-toggle.visible {
+      opacity: 0.7;
+    }
+
+    #highlight-toggle.visible:hover {
+      opacity: 1;
+    }
+
+    #highlight-toggle svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+
+    #highlight-toggle.disabled {
+      opacity: 0.4;
+    }
+
+    #highlight-toggle.disabled.visible {
+      opacity: 0.4;
+    }
+
+    #highlight-toggle.disabled.visible:hover {
+      opacity: 0.6;
     }
 
     /* Language picker dropdown */
@@ -243,7 +298,12 @@
     <pre id="highlight-layer"><code></code></pre>
     <textarea id="editor" autofocus spellcheck="false"></textarea>
   </div>
-  <div id="language-indicator">plaintext</div>
+  <div id="status-bar">
+    <button id="highlight-toggle" title="Toggle syntax highlighting">
+      <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+    </button>
+    <div id="language-indicator" title="Change language">plaintext</div>
+  </div>
   <div id="language-picker"></div>
   <script>
     const hljs = require('highlight.js');
@@ -283,9 +343,14 @@
     const highlightLayer = document.getElementById('highlight-layer').querySelector('code');
     const languageIndicator = document.getElementById('language-indicator');
     const languagePicker = document.getElementById('language-picker');
+    const highlightToggle = document.getElementById('highlight-toggle');
     const KEY = 'blackboard-content';
     const THEME_KEY = 'blackboard-theme';
     const LANG_KEY = 'blackboard-language';
+    const HIGHLIGHT_KEY = 'blackboard-highlighting';
+
+    // Highlighting enabled state
+    let highlightingEnabled = localStorage.getItem(HIGHLIGHT_KEY) !== 'false';
 
     // Minimum relevance score to apply syntax highlighting
     // Higher = more confident detection required
@@ -410,6 +475,28 @@
     // Track current detected language
     let currentLanguage = null;
 
+    // Update highlight toggle button state
+    function updateHighlightToggle() {
+      if (highlightingEnabled) {
+        highlightToggle.classList.remove('disabled');
+        highlightToggle.title = 'Disable syntax highlighting';
+      } else {
+        highlightToggle.classList.add('disabled');
+        highlightToggle.title = 'Enable syntax highlighting';
+      }
+    }
+
+    // Toggle syntax highlighting
+    function toggleHighlighting() {
+      highlightingEnabled = !highlightingEnabled;
+      localStorage.setItem(HIGHLIGHT_KEY, highlightingEnabled ? 'true' : 'false');
+      updateHighlightToggle();
+      applyHighlighting();
+    }
+
+    // Highlight toggle click handler
+    highlightToggle.addEventListener('click', toggleHighlighting);
+
     // Apply highlighting based on current language (manual or detected)
     function applyHighlighting() {
       const text = editor.value;
@@ -419,6 +506,31 @@
         highlightLayer.className = '';
         currentLanguage = null;
         updateIndicator('plaintext');
+        return;
+      }
+
+      // If highlighting is disabled, show plain text
+      if (!highlightingEnabled) {
+        highlightLayer.innerHTML = escapeHtml(text);
+        highlightLayer.className = '';
+        // Still detect language for indicator but don't highlight
+        if (manualLanguage) {
+          updateIndicator(manualLanguage);
+        } else {
+          try {
+            const result = hljs.highlightAuto(text);
+            if (result.relevance >= CONFIDENCE_THRESHOLD && result.language) {
+              currentLanguage = result.language;
+              updateIndicator(result.language);
+            } else {
+              currentLanguage = null;
+              updateIndicator('plaintext');
+            }
+          } catch (e) {
+            currentLanguage = null;
+            updateIndicator('plaintext');
+          }
+        }
         return;
       }
 
@@ -445,6 +557,7 @@
     function updateIndicator(lang) {
       languageIndicator.textContent = lang;
       languageIndicator.classList.add('visible');
+      highlightToggle.classList.add('visible');
     }
 
     // Immediately update display (plain text or re-apply current highlighting)
@@ -456,6 +569,12 @@
         highlightLayer.className = '';
         currentLanguage = null;
         updateIndicator('plaintext');
+        return;
+      }
+
+      // If highlighting is disabled, show plain text
+      if (!highlightingEnabled) {
+        highlightLayer.innerHTML = escapeHtml(text);
         return;
       }
 
@@ -523,6 +642,7 @@
 
     // Initialize
     editor.value = localStorage.getItem(KEY) || '';
+    updateHighlightToggle();
     applyHighlighting();
 
     editor.addEventListener('input', () => {
