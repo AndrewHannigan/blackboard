@@ -145,13 +145,87 @@
       background: var(--toggle-bg);
       border-radius: 4px;
       opacity: 0;
-      transition: opacity 0.3s ease, background 0.3s ease;
+      transition: opacity 0.3s ease, background 0.2s ease;
       z-index: 100;
-      pointer-events: none;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #language-indicator:hover {
+      background: var(--toggle-hover);
     }
 
     #language-indicator.visible {
       opacity: 0.7;
+    }
+
+    #language-indicator.visible:hover {
+      opacity: 1;
+    }
+
+    /* Language picker dropdown */
+    #language-picker {
+      position: fixed;
+      bottom: 44px;
+      right: 16px;
+      background: var(--toggle-bg);
+      border-radius: 6px;
+      padding: 6px 0;
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 101;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+      transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #language-picker.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    #language-picker::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #language-picker::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #language-picker::-webkit-scrollbar-thumb {
+      background: var(--fg);
+      opacity: 0.3;
+      border-radius: 3px;
+    }
+
+    .language-option {
+      padding: 6px 14px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      cursor: pointer;
+      transition: background 0.1s ease;
+      white-space: nowrap;
+    }
+
+    .language-option:hover {
+      background: var(--toggle-hover);
+    }
+
+    .language-option.selected {
+      background: var(--toggle-hover);
+      font-weight: 600;
+    }
+
+    .language-option.auto-detect {
+      border-bottom: 1px solid var(--toggle-hover);
+      margin-bottom: 4px;
+      padding-bottom: 8px;
+      font-style: italic;
+      opacity: 0.8;
     }
   </style>
   <script>
@@ -169,7 +243,8 @@
     <pre id="highlight-layer"><code></code></pre>
     <textarea id="editor" autofocus spellcheck="false"></textarea>
   </div>
-  <div id="language-indicator"></div>
+  <div id="language-indicator">plaintext</div>
+  <div id="language-picker"></div>
   <script>
     const hljs = require('highlight.js');
     
@@ -207,12 +282,114 @@
     const editor = document.getElementById('editor');
     const highlightLayer = document.getElementById('highlight-layer').querySelector('code');
     const languageIndicator = document.getElementById('language-indicator');
+    const languagePicker = document.getElementById('language-picker');
     const KEY = 'blackboard-content';
     const THEME_KEY = 'blackboard-theme';
+    const LANG_KEY = 'blackboard-language';
 
     // Minimum relevance score to apply syntax highlighting
     // Higher = more confident detection required
     const CONFIDENCE_THRESHOLD = 10;
+
+    // Available languages for the picker (alphabetical)
+    const AVAILABLE_LANGUAGES = [
+      'bash',
+      'c',
+      'cpp',
+      'css',
+      'go',
+      'haskell',
+      'html',
+      'java',
+      'javascript',
+      'json',
+      'kotlin',
+      'lua',
+      'markdown',
+      'perl',
+      'php',
+      'python',
+      'r',
+      'ruby',
+      'rust',
+      'scala',
+      'shell',
+      'sql',
+      'swift',
+      'typescript',
+      'yaml'
+    ];
+
+    // Manual language override (null = auto-detect)
+    let manualLanguage = localStorage.getItem(LANG_KEY) || null;
+
+    // Build the language picker dropdown
+    function buildLanguagePicker() {
+      languagePicker.innerHTML = '';
+      
+      // Auto-detect option
+      const autoOption = document.createElement('div');
+      autoOption.className = 'language-option auto-detect' + (manualLanguage === null ? ' selected' : '');
+      autoOption.textContent = 'Auto-detect';
+      autoOption.addEventListener('click', () => selectLanguage(null));
+      languagePicker.appendChild(autoOption);
+
+      // Language options
+      AVAILABLE_LANGUAGES.forEach(lang => {
+        const option = document.createElement('div');
+        option.className = 'language-option' + (manualLanguage === lang ? ' selected' : '');
+        option.textContent = lang;
+        option.addEventListener('click', () => selectLanguage(lang));
+        languagePicker.appendChild(option);
+      });
+    }
+
+    // Select a language
+    function selectLanguage(lang) {
+      manualLanguage = lang;
+      if (lang) {
+        localStorage.setItem(LANG_KEY, lang);
+      } else {
+        localStorage.removeItem(LANG_KEY);
+      }
+      closePicker();
+      applyHighlighting();
+    }
+
+    // Toggle picker visibility
+    function togglePicker() {
+      const isOpen = languagePicker.classList.contains('open');
+      if (isOpen) {
+        closePicker();
+      } else {
+        buildLanguagePicker();
+        languagePicker.classList.add('open');
+      }
+    }
+
+    function closePicker() {
+      languagePicker.classList.remove('open');
+    }
+
+    // Language indicator click handler
+    languageIndicator.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePicker();
+    });
+
+    // Close picker when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!languagePicker.contains(e.target) && e.target !== languageIndicator) {
+        closePicker();
+      }
+    });
+
+    // Close picker on escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePicker();
+      }
+    });
 
     // Escape HTML to prevent XSS and display issues
     function escapeHtml(text) {
@@ -233,6 +410,43 @@
     // Track current detected language
     let currentLanguage = null;
 
+    // Apply highlighting based on current language (manual or detected)
+    function applyHighlighting() {
+      const text = editor.value;
+      
+      if (!text.trim()) {
+        highlightLayer.innerHTML = '';
+        highlightLayer.className = '';
+        currentLanguage = null;
+        updateIndicator('plaintext');
+        return;
+      }
+
+      if (manualLanguage) {
+        // Use manually selected language
+        try {
+          const result = hljs.highlight(text, { language: manualLanguage });
+          currentLanguage = manualLanguage;
+          highlightLayer.innerHTML = result.value;
+          highlightLayer.className = `hljs language-${manualLanguage}`;
+          updateIndicator(manualLanguage);
+        } catch (e) {
+          highlightLayer.innerHTML = escapeHtml(text);
+          highlightLayer.className = '';
+          updateIndicator('plaintext');
+        }
+      } else {
+        // Auto-detect
+        detectAndHighlight();
+      }
+    }
+
+    // Update the language indicator display
+    function updateIndicator(lang) {
+      languageIndicator.textContent = lang;
+      languageIndicator.classList.add('visible');
+    }
+
     // Immediately update display (plain text or re-apply current highlighting)
     function updateDisplayImmediate() {
       const text = editor.value;
@@ -241,14 +455,15 @@
         highlightLayer.innerHTML = '';
         highlightLayer.className = '';
         currentLanguage = null;
-        languageIndicator.classList.remove('visible');
+        updateIndicator('plaintext');
         return;
       }
 
-      if (currentLanguage) {
+      const langToUse = manualLanguage || currentLanguage;
+      if (langToUse) {
         // Re-apply known language highlighting immediately
         try {
-          const result = hljs.highlight(text, { language: currentLanguage });
+          const result = hljs.highlight(text, { language: langToUse });
           highlightLayer.innerHTML = result.value;
         } catch (e) {
           highlightLayer.innerHTML = escapeHtml(text);
@@ -265,7 +480,12 @@
       
       if (!text.trim()) {
         currentLanguage = null;
-        languageIndicator.classList.remove('visible');
+        updateIndicator('plaintext');
+        return;
+      }
+
+      // Skip auto-detection if manual language is set
+      if (manualLanguage) {
         return;
       }
 
@@ -276,19 +496,18 @@
           currentLanguage = result.language;
           highlightLayer.innerHTML = result.value;
           highlightLayer.className = `hljs language-${result.language}`;
-          languageIndicator.textContent = result.language;
-          languageIndicator.classList.add('visible');
+          updateIndicator(result.language);
         } else {
           currentLanguage = null;
           highlightLayer.innerHTML = escapeHtml(text);
           highlightLayer.className = '';
-          languageIndicator.classList.remove('visible');
+          updateIndicator('plaintext');
         }
       } catch (e) {
         currentLanguage = null;
         highlightLayer.innerHTML = escapeHtml(text);
         highlightLayer.className = '';
-        languageIndicator.classList.remove('visible');
+        updateIndicator('plaintext');
       }
     }
 
@@ -304,7 +523,7 @@
 
     // Initialize
     editor.value = localStorage.getItem(KEY) || '';
-    detectAndHighlight();
+    applyHighlighting();
 
     editor.addEventListener('input', () => {
       localStorage.setItem(KEY, editor.value);
