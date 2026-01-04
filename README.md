@@ -1,18 +1,15 @@
 # Blackboard
 
-Blackboard is a very minimal text editor. 
+Blackboard is an app for editing scratch text on the fly.
 
-It's for editing scratch text on the fly, and that's about it.
-
-There's no save mechanism - text just persists between sessions.
+There's no save mechanism. Text just persists between sessions.
 
 Write a SQL snippet, draft a slack message, modify a unix command, etc.
 
 No tabs.  
-No file browser.  
 No startup menus.  
-No dialogs.  
 No exit confirmations.  
+No "unsaved" dot.  
 No syncing.  
 
 Just a little blackboard that's always the way you left it.
