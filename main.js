@@ -60,12 +60,21 @@ function startCliServer() {
         // Set buffer content
         let body = '';
         req.setEncoding('utf8');
-        console.log('POST /buffer - receiving data...');
+        const replaceMode = req.headers['x-mode'] === 'replace';
+        console.log('POST /buffer - receiving data...', replaceMode ? '(replace)' : '(append)');
         req.on('data', chunk => body += chunk);
         req.on('end', () => {
           console.log('POST /buffer - received', body.length, 'bytes');
           const escaped = JSON.stringify(body);
-          const script = `
+          const script = replaceMode ? `
+            (function() {
+              const editor = document.getElementById('editor');
+              editor.value = ${escaped};
+              localStorage.setItem('blackboard-content', ${escaped});
+              editor.dispatchEvent(new Event('input'));
+              return 'ok';
+            })();
+          ` : `
             (function() {
               const editor = document.getElementById('editor');
               const newContent = editor.value + ${escaped};

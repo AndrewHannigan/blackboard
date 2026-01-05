@@ -99,32 +99,38 @@
     }
 
     #dark-toggle {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      width: 36px;
-      height: 36px;
-      border: none;
-      border-radius: 50%;
+      padding: 4px 8px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
       background: var(--toggle-bg);
+      border: none;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.3s ease, background 0.2s ease;
       cursor: pointer;
+      user-select: none;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.2s ease, transform 0.2s ease;
-      z-index: 100;
     }
 
     #dark-toggle:hover {
       background: var(--toggle-hover);
-      transform: scale(1.08);
+    }
+
+    #dark-toggle.visible {
+      opacity: 0.7;
+    }
+
+    #dark-toggle.visible:hover {
+      opacity: 1;
     }
 
     #dark-toggle svg {
-      width: 18px;
-      height: 18px;
-      fill: var(--fg);
-      transition: fill 0.3s ease;
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
     }
 
     .sun-icon { display: block; }
@@ -389,10 +395,6 @@
   </script>
 </head>
 <body>
-  <button id="dark-toggle" title="Toggle dark mode">
-    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-  </button>
   <div id="editor-container">
     <pre id="highlight-layer"><code></code></pre>
     <textarea id="editor" autofocus spellcheck="false"></textarea>
@@ -410,6 +412,10 @@
       <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
     </button>
     <div id="language-indicator" title="Change language">plaintext</div>
+    <button id="dark-toggle" title="Toggle dark mode">
+      <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
   </div>
   <div id="language-picker"></div>
   <script>
@@ -452,6 +458,7 @@
     const languageIndicator = document.getElementById('language-indicator');
     const languagePicker = document.getElementById('language-picker');
     const highlightToggle = document.getElementById('highlight-toggle');
+    const darkToggle = document.getElementById('dark-toggle');
     const KEY = 'blackboard-content';
     const THEME_KEY = 'blackboard-theme';
     const LANG_KEY = 'blackboard-language';
@@ -462,7 +469,7 @@
 
     // Minimum relevance score to apply syntax highlighting
     // Higher = more confident detection required
-    const CONFIDENCE_THRESHOLD = 10;
+    const CONFIDENCE_THRESHOLD = 7;
 
     // Available languages for the picker (alphabetical)
     const AVAILABLE_LANGUAGES = [
@@ -481,6 +488,7 @@
       'markdown',
       'perl',
       'php',
+      'plaintext',
       'python',
       'r',
       'ruby',
@@ -747,6 +755,23 @@
       }
     });
 
+    // Cmd+F to format (if a formatter is available)
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        const lang = manualLanguage || currentLanguage;
+        
+        // Check if we have an available formatter for this language
+        if (lang === 'python' && ruffAvailable) {
+          e.preventDefault();
+          formatWithRuff();
+        } else if (lang === 'sql' && sqlformatAvailable) {
+          e.preventDefault();
+          formatWithSqlformat();
+        }
+        // Otherwise, let default behavior (browser find) happen
+      }
+    });
+
     // Escape HTML to prevent XSS and display issues
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -849,6 +874,7 @@
       languageIndicator.textContent = lang;
       languageIndicator.classList.add('visible');
       highlightToggle.classList.add('visible');
+      darkToggle.classList.add('visible');
       updateRuffButton();
       updateSqlFormatButton();
     }
@@ -947,7 +973,6 @@
     editor.addEventListener('scroll', syncScroll);
 
     // Dark mode toggle
-    const toggle = document.getElementById('dark-toggle');
     const root = document.documentElement;
     const hljsDark = document.getElementById('hljs-dark');
     const hljsLight = document.getElementById('hljs-light');
@@ -959,8 +984,9 @@
     }
 
     updateThemeStyles();
+    darkToggle.classList.add('visible');
 
-    toggle.addEventListener('click', () => {
+    darkToggle.addEventListener('click', () => {
       root.classList.toggle('light');
       localStorage.setItem(THEME_KEY, root.classList.contains('light') ? 'light' : 'dark');
       updateThemeStyles();

@@ -5,7 +5,17 @@ const http = require('http');
 const SOCKET_PORT = 45678;
 const SOCKET_HOST = '127.0.0.1';
 
-const command = process.argv[2];
+// Parse arguments
+let command = undefined;
+let replaceMode = false;
+
+for (const arg of process.argv.slice(2)) {
+  if (arg === '-r' || arg === '--replace') {
+    replaceMode = true;
+  } else if (!command) {
+    command = arg;
+  }
+}
 
 function handleError(err) {
   if (err.code === 'ECONNREFUSED') {
@@ -31,15 +41,20 @@ function cmdIn() {
   });
 
   process.stdin.on('end', () => {
+    const headers = {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Content-Length': Buffer.byteLength(input)
+    };
+    if (replaceMode) {
+      headers['X-Mode'] = 'replace';
+    }
+
     const req = http.request({
       hostname: SOCKET_HOST,
       port: SOCKET_PORT,
       path: '/buffer',
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Length': Buffer.byteLength(input)
-      },
+      headers,
       timeout: 10000
     }, (res) => {
       res.resume();
@@ -108,15 +123,19 @@ function cmdPing() {
 }
 
 function showUsage() {
-  console.log(`Usage: bb [command]
+  console.log(`Usage: bb [command] [options]
 
 Commands:
   cat   Print buffer contents
   ping  Check if Blackboard is running
 
+Options:
+  -r, --replace  Replace buffer instead of appending
+
 Pipe input to write:
-  echo "hello" | bb
-  bb < file.txt`);
+  echo "hello" | bb           # append to buffer
+  echo "hello" | bb -r        # replace buffer
+  bb -r < file.txt            # replace buffer with file contents`);
 }
 
 switch (command) {
