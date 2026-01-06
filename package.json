@@ -30,7 +30,8 @@
       "bin/bb",
       "node_modules/highlight.js/lib/**/*",
       "node_modules/highlight.js/styles/github-dark.css",
-      "node_modules/highlight.js/styles/github.css"
+      "node_modules/highlight.js/styles/github.css",
+      "node_modules/prettier/**/*"
     ],
     "asarUnpack": [
       "bin/bb"
@@ -51,6 +52,7 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "highlight.js": "^11.11.1"
+    "highlight.js": "^11.11.1",
+    "prettier": "^3.4.2"
   }
 }
