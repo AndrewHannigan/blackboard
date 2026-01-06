@@ -10,7 +10,8 @@
     "start": "electron .",
     "build": "electron-builder --mac --dir",
     "install-local": "electron-builder --mac --dir && open dist/mac-arm64/Blackboard.app",
-    "dist": "electron-builder --mac"
+    "dist": "electron-builder --mac",
+    "release": "./scripts/release.sh"
   },
   "build": {
     "appId": "com.blackboard.app",

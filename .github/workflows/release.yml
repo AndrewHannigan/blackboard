@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for macOS
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Blackboard v${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/Blackboard-*.dmg
+            dist/Blackboard-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew Tap
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          DMG_FILE="dist/Blackboard-${VERSION}-arm64.dmg"
+          ZIP_FILE="dist/Blackboard-${VERSION}-arm64.zip"
+          
+          # Calculate SHA256 for the zip (homebrew cask uses zip)
+          SHA256=$(shasum -a 256 "$ZIP_FILE" | awk '{print $1}')
+          
+          # Clone the tap repo
+          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/${{ github.repository_owner }}/homebrew-tap.git tap-repo
+          cd tap-repo
+          
+          # Update the cask formula
+          cat > Casks/blackboard.rb << EOF
+          cask "blackboard" do
+            version "${VERSION}"
+            sha256 "${SHA256}"
+          
+            url "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Blackboard-${VERSION}-arm64.zip"
+            name "Blackboard"
+            desc "The minimum text editor"
+            homepage "https://github.com/${{ github.repository }}"
+          
+            app "Blackboard.app"
+          
+            zap trash: [
+              "~/Library/Application Support/Blackboard",
+              "~/Library/Preferences/com.blackboard.app.plist",
+            ]
+          end
+          EOF
+          
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/blackboard.rb
+          git commit -m "Update blackboard to v${VERSION}"
+          git push
+
