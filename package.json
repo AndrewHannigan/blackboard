@@ -25,6 +25,14 @@
       "icon": "build/icon.png",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "${productName}-${version}-win.${ext}"
+    },
     "files": [
       "main.js",
       "index.html",

@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-and-release:
+  build-mac:
     runs-on: macos-latest
     
     steps:
@@ -28,6 +28,60 @@ jobs:
       - name: Build for macOS
         run: npx electron-builder --mac --publish never
 
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-artifacts
+          path: |
+            dist/Blackboard-*.dmg
+            dist/Blackboard-*.zip
+
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install ImageMagick
+        run: choco install imagemagick -y
+
+      - name: Convert PNG to ICO
+        run: magick build/icon.png -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Windows
+        run: npx electron-builder --win --publish never
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: |
+            dist/Blackboard-*-win.exe
+
+  release:
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
       - name: Get version from tag
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
@@ -42,6 +96,7 @@ jobs:
           files: |
             dist/Blackboard-*.dmg
             dist/Blackboard-*.zip
+            dist/Blackboard-*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -50,7 +105,6 @@ jobs:
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
-          DMG_FILE="dist/Blackboard-${VERSION}-arm64.dmg"
           ZIP_FILE="dist/Blackboard-${VERSION}-arm64.zip"
           
           # Calculate SHA256 for the zip (homebrew cask uses zip)
@@ -87,8 +141,8 @@ jobs:
           CASKEOF
           
           # Replace placeholders with actual values
-          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/blackboard.rb
-          sed -i '' "s/SHA256_PLACEHOLDER/${SHA256}/g" Casks/blackboard.rb
+          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/blackboard.rb
+          sed -i "s/SHA256_PLACEHOLDER/${SHA256}/g" Casks/blackboard.rb
           
           # Commit and push
           git config user.name "github-actions[bot]"
@@ -96,4 +150,3 @@ jobs:
           git add Casks/blackboard.rb
           git commit -m "Update blackboard to v${VERSION}"
           git push
-
