@@ -257,12 +257,6 @@
       opacity: 1;
     }
 
-    #ruff-format svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
-    }
-
     #ruff-format.formatting {
       opacity: 0.5;
       pointer-events: none;
@@ -276,10 +270,6 @@
     #ruff-format.unavailable:hover {
       background: var(--toggle-bg);
       opacity: 0.4;
-    }
-
-    #ruff-format.unavailable svg {
-      opacity: 0.6;
     }
 
     /* SQL format button */
@@ -313,12 +303,6 @@
       opacity: 1;
     }
 
-    #sql-format svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
-    }
-
     #sql-format.formatting {
       opacity: 0.5;
       pointer-events: none;
@@ -332,10 +316,6 @@
     #sql-format.unavailable:hover {
       background: var(--toggle-bg);
       opacity: 0.4;
-    }
-
-    #sql-format.unavailable svg {
-      opacity: 0.6;
     }
 
     /* Formatter tooltip */
@@ -465,12 +445,10 @@
   </div>
   <div id="status-bar">
     <button id="ruff-format" title="Format with Ruff">
-      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-      <span>ruff</span>
+      <span>prettify</span>
     </button>
     <button id="sql-format" title="Format with sqlformat">
-      <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-      <span>sqlformat</span>
+      <span>prettify</span>
     </button>
     <button id="highlight-toggle" title="Toggle syntax highlighting">
       <span>syntax: on</span>
@@ -615,7 +593,6 @@
       if (!code.trim()) return;
 
       ruffFormatBtn.classList.add('formatting');
-      ruffFormatBtn.querySelector('span').textContent = '...';
 
       // Build PATH with common locations
       const pathsToTry = [
@@ -642,7 +619,6 @@
 
       ruff.on('close', (exitCode) => {
         ruffFormatBtn.classList.remove('formatting');
-        ruffFormatBtn.querySelector('span').textContent = 'ruff';
 
         if (exitCode === 0 && formattedCode) {
           // Preserve cursor position roughly
@@ -748,7 +724,6 @@
       if (!code.trim()) return;
 
       sqlFormatBtn.classList.add('formatting');
-      sqlFormatBtn.querySelector('span').textContent = '...';
 
       const pathsToTry = [
         process.env.HOME + '/.local/bin',
@@ -775,7 +750,6 @@
 
       sqlformat.on('close', (exitCode) => {
         sqlFormatBtn.classList.remove('formatting');
-        sqlFormatBtn.querySelector('span').textContent = 'sqlformat';
 
         if (exitCode === 0 && formattedCode) {
           const cursorPos = editor.selectionStart;
