@@ -917,7 +917,13 @@
     function updateIndicator(lang) {
       languageIndicator.textContent = lang;
       languageIndicator.classList.add('visible');
-      highlightToggle.classList.add('visible');
+      
+      if (lang === 'plaintext') {
+        highlightToggle.classList.remove('visible');
+      } else {
+        highlightToggle.classList.add('visible');
+      }
+      
       // darkToggle.classList.add('visible');
       updateRuffButton();
       updateSqlFormatButton();
