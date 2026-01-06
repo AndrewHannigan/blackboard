@@ -280,6 +280,20 @@
       pointer-events: none;
     }
 
+    #ruff-format.unavailable {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #ruff-format.unavailable:hover {
+      background: var(--toggle-bg);
+      opacity: 0.4;
+    }
+
+    #ruff-format.unavailable svg {
+      opacity: 0.6;
+    }
+
     /* SQL format button */
     #sql-format {
       padding: 4px 10px;
@@ -321,6 +335,69 @@
     #sql-format.formatting {
       opacity: 0.5;
       pointer-events: none;
+    }
+
+    #sql-format.unavailable {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    #sql-format.unavailable:hover {
+      background: var(--toggle-bg);
+      opacity: 0.4;
+    }
+
+    #sql-format.unavailable svg {
+      opacity: 0.6;
+    }
+
+    /* Formatter tooltip */
+    .formatter-tooltip {
+      position: fixed;
+      bottom: 54px;
+      right: 16px;
+      background: var(--toggle-bg);
+      border-radius: 6px;
+      padding: 10px 14px;
+      max-width: 280px;
+      z-index: 102;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+      transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      line-height: 1.5;
+    }
+
+    .formatter-tooltip.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .formatter-tooltip-title {
+      font-weight: 600;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .formatter-tooltip-title svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+      opacity: 0.7;
+    }
+
+    .formatter-tooltip code {
+      background: var(--toggle-hover);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
     }
 
     /* Language picker dropdown */
@@ -418,6 +495,7 @@
     </button>
   </div>
   <div id="language-picker"></div>
+  <div id="formatter-tooltip" class="formatter-tooltip"></div>
   <script>
     const hljs = require('highlight.js');
     const { exec, spawn } = require('child_process');
@@ -527,10 +605,18 @@
     // Update ruff button visibility
     function updateRuffButton() {
       const isPython = currentLanguage === 'python' || manualLanguage === 'python';
-      if (ruffAvailable && isPython && editor.value.trim()) {
+      if (isPython && editor.value.trim()) {
         ruffFormatBtn.classList.add('visible');
+        if (ruffAvailable) {
+          ruffFormatBtn.classList.remove('unavailable');
+          ruffFormatBtn.title = 'Format with Ruff (⌘F)';
+        } else {
+          ruffFormatBtn.classList.add('unavailable');
+          ruffFormatBtn.title = 'Ruff not installed - click for info';
+        }
       } else {
         ruffFormatBtn.classList.remove('visible');
+        ruffFormatBtn.classList.remove('unavailable');
       }
     }
 
@@ -592,7 +678,13 @@
     }
 
     // Ruff button click handler
-    ruffFormatBtn.addEventListener('click', formatWithRuff);
+    ruffFormatBtn.addEventListener('click', () => {
+      if (ruffAvailable) {
+        formatWithRuff();
+      } else {
+        showFormatterTooltip('ruff', 'uv tool install ruff');
+      }
+    });
 
     // Check for ruff on startup
     checkRuffAvailable();
@@ -600,6 +692,33 @@
     // sqlformat availability
     let sqlformatAvailable = false;
     const sqlFormatBtn = document.getElementById('sql-format');
+
+    // Formatter tooltip
+    const formatterTooltip = document.getElementById('formatter-tooltip');
+    let tooltipTimeout = null;
+
+    function showFormatterTooltip(formatter, installCmd) {
+      clearTimeout(tooltipTimeout);
+      formatterTooltip.innerHTML = `
+        <div class="formatter-tooltip-title">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+          ${formatter} not installed
+        </div>
+        <div>To enable formatting, run:</div>
+        <div style="margin-top: 6px;"><code>${installCmd}</code></div>
+      `;
+      formatterTooltip.classList.add('open');
+      
+      // Auto-hide after 5 seconds
+      tooltipTimeout = setTimeout(() => {
+        formatterTooltip.classList.remove('open');
+      }, 5000);
+    }
+
+    function hideFormatterTooltip() {
+      clearTimeout(tooltipTimeout);
+      formatterTooltip.classList.remove('open');
+    }
 
     // Check if sqlformat is available on system
     function checkSqlformatAvailable() {
@@ -619,10 +738,18 @@
     // Update sqlformat button visibility
     function updateSqlFormatButton() {
       const isSQL = currentLanguage === 'sql' || manualLanguage === 'sql';
-      if (sqlformatAvailable && isSQL && editor.value.trim()) {
+      if (isSQL && editor.value.trim()) {
         sqlFormatBtn.classList.add('visible');
+        if (sqlformatAvailable) {
+          sqlFormatBtn.classList.remove('unavailable');
+          sqlFormatBtn.title = 'Format with sqlformat (⌘F)';
+        } else {
+          sqlFormatBtn.classList.add('unavailable');
+          sqlFormatBtn.title = 'sqlformat not installed - click for info';
+        }
       } else {
         sqlFormatBtn.classList.remove('visible');
+        sqlFormatBtn.classList.remove('unavailable');
       }
     }
 
@@ -682,7 +809,13 @@
     }
 
     // sqlformat button click handler
-    sqlFormatBtn.addEventListener('click', formatWithSqlformat);
+    sqlFormatBtn.addEventListener('click', () => {
+      if (sqlformatAvailable) {
+        formatWithSqlformat();
+      } else {
+        showFormatterTooltip('sqlformat', 'uv tool install --from sqlparse sqlformat');
+      }
+    });
 
     // Check for sqlformat on startup
     checkSqlformatAvailable();
@@ -746,12 +879,19 @@
       if (!languagePicker.contains(e.target) && e.target !== languageIndicator) {
         closePicker();
       }
+      // Close formatter tooltip when clicking outside
+      if (!formatterTooltip.contains(e.target) && 
+          !ruffFormatBtn.contains(e.target) && 
+          !sqlFormatBtn.contains(e.target)) {
+        hideFormatterTooltip();
+      }
     });
 
-    // Close picker on escape
+    // Close picker and tooltip on escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closePicker();
+        hideFormatterTooltip();
       }
     });
 
