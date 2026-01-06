@@ -3,21 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <title>Blackboard</title>
-  <link rel="stylesheet" href="./node_modules/highlight.js/styles/github-dark.css" id="hljs-dark">
-  <link rel="stylesheet" href="./node_modules/highlight.js/styles/github.css" id="hljs-light" disabled>
+  <link rel="stylesheet" href="./node_modules/highlight.js/styles/github-dark.css">
   <style>
     :root {
       --bg: #0d0d0d;
       --fg: #e0e0e0;
       --toggle-bg: #2a2a2a;
       --toggle-hover: #3a3a3a;
-    }
-
-    :root.light {
-      --bg: #faf9f7;
-      --fg: #1a1a1a;
-      --toggle-bg: #e8e6e3;
-      --toggle-hover: #dbd8d4;
     }
 
     html, body {
@@ -97,47 +89,6 @@
       background: transparent !important;
       padding: 0 !important;
     }
-
-    #dark-toggle {
-      padding: 4px 8px;
-      font-family: Monaco, Menlo, monospace;
-      font-size: 11px;
-      color: var(--fg);
-      background: var(--toggle-bg);
-      border: none;
-      border-radius: 4px;
-      opacity: 0;
-      transition: opacity 0.3s ease, background 0.2s ease;
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #dark-toggle:hover {
-      background: var(--toggle-hover);
-    }
-
-    #dark-toggle.visible {
-      opacity: 0.7;
-    }
-
-    #dark-toggle.visible:hover {
-      opacity: 1;
-    }
-
-    #dark-toggle svg {
-      width: 12px;
-      height: 12px;
-      fill: currentColor;
-    }
-
-    .sun-icon { display: block; }
-    .moon-icon { display: none; }
-
-    :root.light .sun-icon { display: none; }
-    :root.light .moon-icon { display: block; }
 
     /* Language indicator */
     #language-indicator {
@@ -432,11 +383,6 @@
       opacity: 0.8;
     }
   </style>
-  <script>
-    if (localStorage.getItem('blackboard-theme') === 'light') {
-      document.documentElement.classList.add('light');
-    }
-  </script>
 </head>
 <body>
   <div id="editor-container">
@@ -454,10 +400,6 @@
       <span>syntax: on</span>
     </button>
     <div id="language-indicator" title="Change language">plaintext</div>
-    <!-- <button id="dark-toggle" title="Toggle dark mode">
-      <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      <svg class="sun-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button> -->
   </div>
   <div id="language-picker"></div>
   <div id="formatter-tooltip" class="formatter-tooltip"></div>
@@ -501,9 +443,7 @@
     const languageIndicator = document.getElementById('language-indicator');
     const languagePicker = document.getElementById('language-picker');
     const highlightToggle = document.getElementById('highlight-toggle');
-    // const darkToggle = document.getElementById('dark-toggle');
     const KEY = 'blackboard-content';
-    const THEME_KEY = 'blackboard-theme';
     const LANG_KEY = 'blackboard-language';
     const HIGHLIGHT_KEY = 'blackboard-highlighting';
 
@@ -1075,26 +1015,6 @@
     });
 
     editor.addEventListener('scroll', syncScroll);
-
-    // Dark mode toggle
-    const root = document.documentElement;
-    const hljsDark = document.getElementById('hljs-dark');
-    const hljsLight = document.getElementById('hljs-light');
-
-    function updateThemeStyles() {
-      const isLight = root.classList.contains('light');
-      hljsDark.disabled = isLight;
-      hljsLight.disabled = !isLight;
-    }
-
-    updateThemeStyles();
-    // darkToggle.classList.add('visible');
-
-    // darkToggle.addEventListener('click', () => {
-    //   root.classList.toggle('light');
-    //   localStorage.setItem(THEME_KEY, root.classList.contains('light') ? 'light' : 'dark');
-    //   updateThemeStyles();
-    // });
   </script>
 </body>
 </html>
