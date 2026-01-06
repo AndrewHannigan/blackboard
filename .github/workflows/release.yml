@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     runs-on: macos-latest
@@ -23,9 +26,7 @@ jobs:
         run: npm ci
 
       - name: Build for macOS
-        run: npm run dist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --mac --publish never
 
       - name: Get version from tag
         id: version
