@@ -10,6 +10,9 @@
       --fg: #e0e0e0;
       --toggle-bg: #2a2a2a;
       --toggle-hover: #3a3a3a;
+      --tab-border: #333;
+      --tab-active: #0d0d0d;
+      --tab-inactive: #181818;
     }
 
     html, body {
@@ -21,10 +24,133 @@
       transition: background 0.3s ease;
     }
 
+    #app-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Tab bar styles */
+    #tab-bar {
+      display: none;
+      flex-shrink: 0;
+      width: 100%;
+      background: var(--tab-inactive);
+      border-bottom: 1px solid var(--tab-border);
+    }
+
+    #tab-bar.visible {
+      display: flex;
+    }
+
+    .tab {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 12px;
+      color: var(--fg);
+      opacity: 0.5;
+      background: var(--tab-inactive);
+      border: none;
+      border-right: 1px solid var(--tab-border);
+      cursor: pointer;
+      transition: opacity 0.15s ease, background 0.15s ease;
+      position: relative;
+    }
+
+    .tab:last-child {
+      border-right: none;
+    }
+
+    .tab:hover {
+      opacity: 0.7;
+      background: var(--toggle-bg);
+    }
+
+    .tab.active {
+      opacity: 1;
+      background: var(--tab-active);
+    }
+
+    .tab-close {
+      position: absolute;
+      right: 8px;
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.1s ease, background 0.1s ease;
+    }
+
+    .tab:hover .tab-close,
+    .tab.active .tab-close {
+      opacity: 0.5;
+    }
+
+    .tab-close:hover {
+      opacity: 1 !important;
+      background: var(--toggle-hover);
+    }
+
+    .tab-close svg {
+      width: 10px;
+      height: 10px;
+      fill: currentColor;
+    }
+
+    .tab-name {
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab-name-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: inherit;
+      font: inherit;
+      text-align: center;
+      width: 80px;
+      padding: 0;
+      margin: 0;
+    }
+
+    #add-tab {
+      flex-shrink: 0;
+      width: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 16px;
+      color: var(--fg);
+      opacity: 0.4;
+      background: var(--tab-inactive);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+
+    #add-tab:hover {
+      opacity: 0.8;
+      background: var(--toggle-bg);
+    }
+
     #editor-container {
       position: relative;
       width: 100%;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
     }
 
     #editor, #highlight-layer {
@@ -421,9 +547,15 @@
   </style>
 </head>
 <body>
-  <div id="editor-container">
-    <pre id="highlight-layer"><code></code></pre>
-    <textarea id="editor" autofocus spellcheck="false"></textarea>
+  <div id="app-container">
+    <div id="tab-bar">
+      <!-- Tabs will be generated dynamically -->
+      <button id="add-tab" title="New tab (⌘T)">+</button>
+    </div>
+    <div id="editor-container">
+      <pre id="highlight-layer"><code></code></pre>
+      <textarea id="editor" autofocus spellcheck="false"></textarea>
+    </div>
   </div>
   <div id="status-bar">
     <button id="ruff-format" title="Format with Ruff">
@@ -445,6 +577,278 @@
   <script>
     const hljs = require('highlight.js');
     const { exec, spawn } = require('child_process');
+    
+    // ===== STORAGE KEYS =====
+    const KEY = 'blackboard-content';
+    const LANG_KEY = 'blackboard-language';
+    const HIGHLIGHT_KEY = 'blackboard-highlighting';
+    const TABS_KEY = 'blackboard-tabs';
+    const ACTIVE_TAB_KEY = 'blackboard-active-tab';
+    
+    const tabBar = document.getElementById('tab-bar');
+    const addTabBtn = document.getElementById('add-tab');
+    
+    // Load tabs from localStorage or create default
+    function loadTabs() {
+      const stored = localStorage.getItem(TABS_KEY);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // Clear old auto-generated single-letter names
+          return parsed.map(tab => ({
+            ...tab,
+            name: (tab.name && tab.name.length > 1) ? tab.name : ''
+          }));
+        } catch (e) {
+          return [{ id: 'tab-0', name: '', content: localStorage.getItem('blackboard-content') || '', language: null }];
+        }
+      }
+      // Migrate existing content to first tab
+      return [{ id: 'tab-0', name: '', content: localStorage.getItem('blackboard-content') || '', language: localStorage.getItem('blackboard-language') || null }];
+    }
+    
+    // Save tabs to localStorage
+    function saveTabs() {
+      localStorage.setItem(TABS_KEY, JSON.stringify(tabs));
+      localStorage.setItem(ACTIVE_TAB_KEY, activeTabId);
+    }
+    
+    // Initialize tabs state
+    let tabs = loadTabs();
+    let activeTabId = localStorage.getItem(ACTIVE_TAB_KEY) || tabs[0]?.id || 'tab-0';
+    
+    // Ensure activeTabId exists in tabs
+    if (!tabs.find(t => t.id === activeTabId)) {
+      activeTabId = tabs[0]?.id || 'tab-0';
+    }
+    
+    // Render the tab bar
+    function renderTabs() {
+      // Remove existing tab buttons (but keep the add button)
+      const existingTabs = tabBar.querySelectorAll('.tab');
+      existingTabs.forEach(t => t.remove());
+      
+      // Show/hide tab bar based on tab count or if any tab has a name
+      const anyTabHasName = tabs.some(t => t.name && t.name.trim());
+      if (tabs.length <= 1 && !anyTabHasName) {
+        tabBar.classList.remove('visible');
+      } else {
+        tabBar.classList.add('visible');
+      }
+      
+      // Create tab buttons
+      tabs.forEach((tab, index) => {
+        const tabEl = document.createElement('button');
+        tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        tabEl.dataset.tabId = tab.id;
+        
+        // Add name span if tab has a name
+        if (tab.name) {
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'tab-name';
+          nameSpan.textContent = tab.name;
+          tabEl.appendChild(nameSpan);
+        }
+        
+        // Add close button (only if more than one tab)
+        if (tabs.length > 1) {
+          const closeBtn = document.createElement('span');
+          closeBtn.className = 'tab-close';
+          closeBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+          closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeTab(tab.id);
+          });
+          tabEl.appendChild(closeBtn);
+        }
+        
+        tabEl.addEventListener('click', () => switchToTab(tab.id));
+        
+        // Double-click to edit name (only on active tab)
+        tabEl.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          if (tab.id === activeTabId) {
+            startEditingTabName(tab.id, tabEl);
+          }
+        });
+        
+        // Insert before the add button
+        tabBar.insertBefore(tabEl, addTabBtn);
+      });
+    }
+    
+    // Start editing a tab's name
+    function startEditingTabName(tabId, tabEl) {
+      const tab = tabs.find(t => t.id === tabId);
+      if (!tab) return;
+      
+      // Remove existing content
+      const existingName = tabEl.querySelector('.tab-name');
+      if (existingName) existingName.remove();
+      
+      // Create input
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'tab-name-input';
+      input.value = tab.name || '';
+      input.placeholder = '...';
+      
+      // Insert at the beginning (before close button)
+      tabEl.insertBefore(input, tabEl.firstChild);
+      input.focus();
+      input.select();
+      
+      // Save on blur or enter
+      const saveAndClose = () => {
+        tab.name = input.value.trim();
+        saveTabs();
+        renderTabs();
+        editor.focus();
+      };
+      
+      input.addEventListener('blur', saveAndClose);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveAndClose();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          renderTabs();
+          editor.focus();
+        }
+      });
+      
+      // Prevent click from bubbling
+      input.addEventListener('click', (e) => e.stopPropagation());
+    }
+    
+    // Get active tab data
+    function getActiveTab() {
+      return tabs.find(t => t.id === activeTabId) || tabs[0];
+    }
+    
+    // Switch to a tab
+    function switchToTab(tabId) {
+      // Don't do anything if already on this tab (allows double-click to work)
+      if (tabId === activeTabId) return;
+      
+      // Save current tab content
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.content = editor.value;
+        currentTab.language = manualLanguage;
+      }
+      
+      // Switch to new tab
+      activeTabId = tabId;
+      const newTab = getActiveTab();
+      
+      if (newTab) {
+        editor.value = newTab.content || '';
+        manualLanguage = newTab.language;
+        if (manualLanguage) {
+          localStorage.setItem(LANG_KEY, manualLanguage);
+        } else {
+          localStorage.removeItem(LANG_KEY);
+        }
+      }
+      
+      saveTabs();
+      renderTabs();
+      applyHighlighting();
+      editor.focus();
+    }
+    
+    // Create a new tab
+    function createNewTab() {
+      // Save current tab content first
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.content = editor.value;
+        currentTab.language = manualLanguage;
+      }
+      
+      // Create new tab
+      const newId = 'tab-' + Date.now();
+      tabs.push({ id: newId, name: '', content: '', language: null });
+      activeTabId = newId;
+      
+      // Clear editor
+      editor.value = '';
+      manualLanguage = null;
+      localStorage.removeItem(LANG_KEY);
+      
+      saveTabs();
+      renderTabs();
+      applyHighlighting();
+      editor.focus();
+    }
+    
+    // Close a tab
+    function closeTab(tabId) {
+      if (tabs.length <= 1) return; // Don't close last tab
+      
+      const index = tabs.findIndex(t => t.id === tabId);
+      if (index === -1) return;
+      
+      tabs.splice(index, 1);
+      
+      // If we closed the active tab, switch to another
+      if (tabId === activeTabId) {
+        // Switch to the tab at the same index, or the last tab if we closed the last one
+        const newIndex = Math.min(index, tabs.length - 1);
+        activeTabId = tabs[newIndex].id;
+        const newTab = tabs[newIndex];
+        editor.value = newTab.content || '';
+        manualLanguage = newTab.language;
+        if (manualLanguage) {
+          localStorage.setItem(LANG_KEY, manualLanguage);
+        } else {
+          localStorage.removeItem(LANG_KEY);
+        }
+        applyHighlighting();
+      }
+      
+      saveTabs();
+      renderTabs();
+      editor.focus();
+    }
+    
+    // Add tab button handler
+    addTabBtn.addEventListener('click', createNewTab);
+    
+    // Keyboard shortcuts for tabs
+    document.addEventListener('keydown', (e) => {
+      // Cmd+T to create new tab
+      if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+        e.preventDefault();
+        createNewTab();
+      }
+      // Cmd+W to close current tab
+      if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+        e.preventDefault();
+        if (tabs.length > 1) {
+          closeTab(activeTabId);
+        }
+      }
+      // Cmd+Shift+] to go to next tab
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === ']') {
+        e.preventDefault();
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+        const nextIndex = (currentIndex + 1) % tabs.length;
+        switchToTab(tabs[nextIndex].id);
+      }
+      // Cmd+Shift+[ to go to previous tab
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === '[') {
+        e.preventDefault();
+        const currentIndex = tabs.findIndex(t => t.id === activeTabId);
+        const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+        switchToTab(tabs[prevIndex].id);
+      }
+    });
+    
+    // ===== END TAB MANAGEMENT =====
     
     // Limit auto-detection to these languages only
     hljs.configure({
@@ -482,9 +886,6 @@
     const languageIndicator = document.getElementById('language-indicator');
     const languagePicker = document.getElementById('language-picker');
     const highlightToggle = document.getElementById('highlight-toggle');
-    const KEY = 'blackboard-content';
-    const LANG_KEY = 'blackboard-language';
-    const HIGHLIGHT_KEY = 'blackboard-highlighting';
 
     // Highlighting enabled state
     let highlightingEnabled = localStorage.getItem(HIGHLIGHT_KEY) !== 'false';
@@ -880,6 +1281,12 @@
       } else {
         localStorage.removeItem(LANG_KEY);
       }
+      // Save language to current tab
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.language = lang;
+        saveTabs();
+      }
       closePicker();
       applyHighlighting();
     }
@@ -1143,12 +1550,28 @@
     // Debounced language detection
     const debouncedDetect = debounce(detectAndHighlight, 300);
 
-    // Initialize
-    editor.value = localStorage.getItem(KEY) || '';
+    // Initialize from active tab
+    const initialTab = getActiveTab();
+    if (initialTab) {
+      editor.value = initialTab.content || '';
+      manualLanguage = initialTab.language;
+      if (manualLanguage) {
+        localStorage.setItem(LANG_KEY, manualLanguage);
+      }
+    }
+    
     updateHighlightToggle();
+    renderTabs();
     applyHighlighting();
 
     editor.addEventListener('input', () => {
+      // Save to current tab
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.content = editor.value;
+        saveTabs();
+      }
+      // Also save to legacy key for compatibility with CLI
       localStorage.setItem(KEY, editor.value);
       updateDisplayImmediate();  // Instant text update
       debouncedDetect();         // Delayed language detection
