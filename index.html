@@ -269,6 +269,42 @@
       opacity: 0.4;
     }
 
+    /* Prettier format button */
+    #prettier-format {
+      padding: 4px 10px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 4px;
+      opacity: 0;
+      display: none;
+      transition: opacity 0.3s ease, background 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #prettier-format:hover {
+      background: var(--toggle-hover);
+    }
+
+    #prettier-format.visible {
+      opacity: 0.7;
+      display: flex;
+    }
+
+    #prettier-format.visible:hover {
+      opacity: 1;
+    }
+
+    #prettier-format.formatting {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
     /* Formatter tooltip */
     .formatter-tooltip {
       position: fixed;
@@ -391,10 +427,13 @@
   </div>
   <div id="status-bar">
     <button id="ruff-format" title="Format with Ruff">
-      <span>prettify</span>
+      <span>format w/ ruff</span>
     </button>
     <button id="sql-format" title="Format with sqlformat">
-      <span>prettify</span>
+      <span>format w/ sqlformat</span>
+    </button>
+    <button id="prettier-format" title="Format with Prettier (⌘F)">
+      <span>format w/ prettier</span>
     </button>
     <button id="highlight-toggle" title="Toggle syntax highlighting">
       <span>syntax: on</span>
@@ -721,6 +760,97 @@
     // Check for sqlformat on startup
     checkSqlformatAvailable();
 
+    // Prettier (bundled with app - always available)
+    // Lazy load to avoid blocking startup
+    let prettierModule = null;
+    let prettierPlugins = {};
+    
+    const prettierFormatBtn = document.getElementById('prettier-format');
+
+    // Languages supported by Prettier and their parser names + plugin names
+    const PRETTIER_CONFIG = {
+      'javascript': { parser: 'babel', pluginNames: ['babel', 'estree'] },
+      'typescript': { parser: 'typescript', pluginNames: ['typescript', 'estree'] },
+      'json': { parser: 'json', pluginNames: ['babel', 'estree'] },
+      'html': { parser: 'html', pluginNames: ['html'] },
+      'css': { parser: 'css', pluginNames: ['postcss'] },
+      'markdown': { parser: 'markdown', pluginNames: ['markdown'] },
+      'yaml': { parser: 'yaml', pluginNames: ['yaml'] }
+    };
+
+    // Lazy load prettier and required plugins
+    function getPrettierPlugins(pluginNames) {
+      if (!prettierModule) {
+        prettierModule = require('prettier/standalone');
+      }
+      const plugins = [];
+      for (const name of pluginNames) {
+        if (!prettierPlugins[name]) {
+          prettierPlugins[name] = require(`prettier/plugins/${name}`);
+        }
+        plugins.push(prettierPlugins[name]);
+      }
+      return plugins;
+    }
+
+    // Update prettier button visibility
+    function updatePrettierButton() {
+      const lang = manualLanguage || currentLanguage;
+      const config = PRETTIER_CONFIG[lang];
+      
+      if (config && editor.value.trim()) {
+        prettierFormatBtn.classList.add('visible');
+        prettierFormatBtn.title = 'Format with Prettier (⌘F)';
+      } else {
+        prettierFormatBtn.classList.remove('visible');
+      }
+    }
+
+    // Format code with Prettier
+    async function formatWithPrettier() {
+      const code = editor.value;
+      if (!code.trim()) return;
+
+      const lang = manualLanguage || currentLanguage;
+      const config = PRETTIER_CONFIG[lang];
+      if (!config) return;
+
+      prettierFormatBtn.classList.add('formatting');
+
+      try {
+        const plugins = getPrettierPlugins(config.pluginNames);
+        const formattedCode = await prettierModule.format(code, {
+          parser: config.parser,
+          plugins: plugins,
+          tabWidth: 2,
+          singleQuote: true,
+          trailingComma: 'es5',
+          printWidth: 100
+        });
+
+        // Preserve cursor position roughly
+        const cursorPos = editor.selectionStart;
+        const ratio = cursorPos / code.length;
+
+        editor.value = formattedCode;
+        localStorage.setItem(KEY, formattedCode);
+
+        // Restore cursor position proportionally
+        const newPos = Math.round(ratio * formattedCode.length);
+        editor.setSelectionRange(newPos, newPos);
+
+        applyHighlighting();
+      } catch (err) {
+        // Formatting failed (likely syntax error) - just ignore
+        console.error('Prettier error:', err);
+      } finally {
+        prettierFormatBtn.classList.remove('formatting');
+      }
+    }
+
+    // Prettier button click handler
+    prettierFormatBtn.addEventListener('click', formatWithPrettier);
+
     // Build the language picker dropdown
     function buildLanguagePicker() {
       languagePicker.innerHTML = '';
@@ -808,6 +938,9 @@
         } else if (lang === 'sql' && sqlformatAvailable) {
           e.preventDefault();
           formatWithSqlformat();
+        } else if (PRETTIER_CONFIG[lang]) {
+          e.preventDefault();
+          formatWithPrettier();
         }
         // Otherwise, let default behavior (browser find) happen
       }
@@ -927,6 +1060,7 @@
       // darkToggle.classList.add('visible');
       updateRuffButton();
       updateSqlFormatButton();
+      updatePrettierButton();
     }
 
     // Immediately update display (plain text or re-apply current highlighting)
