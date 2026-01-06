@@ -61,24 +61,34 @@ jobs:
           cd tap-repo
           
           # Update the cask formula
-          cat > Casks/blackboard.rb << EOF
+          cat > Casks/blackboard.rb << 'CASKEOF'
           cask "blackboard" do
-            version "${VERSION}"
-            sha256 "${SHA256}"
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA256_PLACEHOLDER"
           
-            url "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/Blackboard-${VERSION}-arm64.zip"
+            url "https://github.com/AndrewHannigan/blackboard/releases/download/v#{version}/Blackboard-#{version}-arm64.zip"
             name "Blackboard"
-            desc "The minimum text editor"
-            homepage "https://github.com/${{ github.repository }}"
+            desc "Minimal scratch text editor"
+            homepage "https://github.com/AndrewHannigan/blackboard"
           
             app "Blackboard.app"
+            binary "#{appdir}/Blackboard.app/Contents/Resources/app.asar.unpacked/bin/bb"
+          
+            caveats <<~EOS
+              Blackboard is not signed. To open it, run:
+                xattr -cr /Applications/Blackboard.app
+            EOS
           
             zap trash: [
               "~/Library/Application Support/Blackboard",
               "~/Library/Preferences/com.blackboard.app.plist",
             ]
           end
-          EOF
+          CASKEOF
+          
+          # Replace placeholders with actual values
+          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/blackboard.rb
+          sed -i '' "s/SHA256_PLACEHOLDER/${SHA256}/g" Casks/blackboard.rb
           
           # Commit and push
           git config user.name "github-actions[bot]"
