@@ -1346,7 +1346,7 @@
       if (ruffAvailable) {
         formatWithRuff();
       } else {
-        showFormatterTooltip('ruff', 'uv tool install ruff');
+        showFormatterTooltip('ruff', null, 'https://docs.astral.sh/ruff/installation/');
       }
     });
 
@@ -1361,15 +1361,27 @@
     const formatterTooltip = document.getElementById('formatter-tooltip');
     let tooltipTimeout = null;
 
-    function showFormatterTooltip(formatter, installCmd) {
+    function showFormatterTooltip(formatter, installCmd, docUrl, altInstallCmd) {
       clearTimeout(tooltipTimeout);
+      let installInstructions;
+      if (docUrl) {
+        installInstructions = `<div>See installation instructions:</div>
+           <div style="margin-top: 6px;"><a href="${docUrl}" style="color: #6bb3ff; text-decoration: underline;">${docUrl}</a></div>`;
+      } else if (altInstallCmd) {
+        installInstructions = `<div>To enable formatting, install with uv (recommended):</div>
+           <div style="margin-top: 6px;"><code>${installCmd}</code></div>
+           <div style="margin-top: 10px;">Or with pip:</div>
+           <div style="margin-top: 6px;"><code>${altInstallCmd}</code></div>`;
+      } else {
+        installInstructions = `<div>To enable formatting, run:</div>
+           <div style="margin-top: 6px;"><code>${installCmd}</code></div>`;
+      }
       formatterTooltip.innerHTML = `
         <div class="formatter-tooltip-title">
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
           ${formatter} not installed
         </div>
-        <div>To enable formatting, run:</div>
-        <div style="margin-top: 6px;"><code>${installCmd}</code></div>
+        ${installInstructions}
       `;
       formatterTooltip.classList.add('open');
       
@@ -1475,7 +1487,7 @@
       if (sqlformatAvailable) {
         formatWithSqlformat();
       } else {
-        showFormatterTooltip('sqlformat', 'uv tool install --from sqlparse sqlformat');
+        showFormatterTooltip('sqlformat', 'uv tool install --from sqlparse sqlformat', null, 'pip install sqlparse');
       }
     });
 
