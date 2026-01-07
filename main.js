@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const http = require('http');
 
 const CLI_PORT = 45678;
@@ -24,6 +24,20 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
+
+  // Open external links in default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    // Allow navigation to local files, but open external URLs in browser
+    if (!url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
 }
 
 // CLI server to communicate with the `bb-*` commands
