@@ -718,7 +718,7 @@
       <span>format w/ prettier</span>
     </button>
     <button id="highlight-toggle" title="Toggle syntax highlighting">
-      <span>syntax: on</span>
+      <span>syntax on</span>
     </button>
     <div id="language-indicator" title="Change language">plaintext</div>
   </div>
@@ -1626,11 +1626,11 @@
       if (highlightingEnabled) {
         highlightToggle.classList.remove('disabled');
         highlightToggle.title = 'Disable syntax highlighting';
-        span.textContent = 'syntax: on';
+        span.textContent = 'syntax on';
       } else {
         highlightToggle.classList.add('disabled');
         highlightToggle.title = 'Enable syntax highlighting';
-        span.textContent = 'syntax: off';
+        span.textContent = 'syntax off';
       }
     }
 
@@ -1703,7 +1703,12 @@
 
     // Update the language indicator display
     function updateIndicator(lang) {
-      languageIndicator.textContent = lang;
+      // Show "auto: LANGUAGE" when in auto-detect mode and a language was detected
+      if (manualLanguage === null && lang !== 'plaintext') {
+        languageIndicator.textContent = 'auto: ' + lang;
+      } else {
+        languageIndicator.textContent = lang;
+      }
       languageIndicator.classList.add('visible');
       
       if (lang === 'plaintext') {
