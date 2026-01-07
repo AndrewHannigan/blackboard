@@ -4,13 +4,12 @@ Blackboard is an app for editing scratch text on the fly.
 
 There's no save mechanism. Text just persists between sessions.
 
-Write a SQL snippet, draft a slack message, modify a unix command, etc.
+Write a SQL snippet, draft a slack message, tweak a unix command, etc.
 
-No tabs.  
-No startup menus.  
-No exit confirmations.  
-No "unsaved" dot.  
-No syncing.  
+No startup menus.
+No exit confirmations.
+No "unsaved" dot.
+No syncing.
 
 Just a little blackboard that's always the way you left it.
 
