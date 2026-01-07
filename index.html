@@ -1093,16 +1093,16 @@
     // Highlighting enabled state
     let highlightingEnabled = localStorage.getItem(HIGHLIGHT_KEY) !== 'false';
 
-    // Minimum relevance-per-character to apply syntax highlighting
-    // Higher = more confident detection required
-    const RELEVANCE_PER_CHAR_THRESHOLD = 0.05;
+    // Minimum thresholds to apply syntax highlighting
+    const RELEVANCE_THRESHOLD = 5;
+    const RELEVANCE_PER_CHAR_THRESHOLD = 0.02;
 
     // Check if detected language meets confidence threshold
     function meetsConfidenceThreshold(relevance, text) {
       const charCount = text.length;
       if (charCount === 0) return false;
       const relevancePerChar = relevance / charCount;
-      return relevancePerChar >= RELEVANCE_PER_CHAR_THRESHOLD;
+      return relevance >= RELEVANCE_THRESHOLD && relevancePerChar > RELEVANCE_PER_CHAR_THRESHOLD;
     }
 
     // Developer mode state
