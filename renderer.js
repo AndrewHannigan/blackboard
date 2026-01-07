@@ -579,6 +579,13 @@ function formatWithRuff() {
       editor.value = formattedCode;
       localStorage.setItem(KEY, formattedCode);
       
+      // Save to current tab
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.content = formattedCode;
+        saveTabs();
+      }
+      
       // Restore cursor position proportionally
       const newPos = Math.round(ratio * formattedCode.length);
       editor.setSelectionRange(newPos, newPos);
@@ -721,6 +728,13 @@ function formatWithSqlformat() {
       editor.value = formattedCode;
       localStorage.setItem(KEY, formattedCode);
       
+      // Save to current tab
+      const currentTab = getActiveTab();
+      if (currentTab) {
+        currentTab.content = formattedCode;
+        saveTabs();
+      }
+      
       const newPos = Math.round(ratio * formattedCode.length);
       editor.setSelectionRange(newPos, newPos);
       
@@ -818,6 +832,13 @@ async function formatWithPrettier() {
 
     editor.value = formattedCode;
     localStorage.setItem(KEY, formattedCode);
+
+    // Save to current tab
+    const currentTab = getActiveTab();
+    if (currentTab) {
+      currentTab.content = formattedCode;
+      saveTabs();
+    }
 
     // Restore cursor position proportionally
     const newPos = Math.round(ratio * formattedCode.length);
