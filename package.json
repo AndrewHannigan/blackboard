@@ -36,6 +36,8 @@
     "files": [
       "main.js",
       "index.html",
+      "styles.css",
+      "renderer.js",
       "bin/bb",
       "node_modules/highlight.js/lib/**/*",
       "node_modules/highlight.js/styles/github-dark.css",
