@@ -661,7 +661,7 @@
       left: 16px;
       background: var(--toggle-bg);
       border-radius: 6px;
-      padding: 8px 12px;
+      padding: 10px 14px;
       font-family: Monaco, Menlo, monospace;
       font-size: 10px;
       color: var(--fg);
@@ -669,10 +669,11 @@
       visibility: hidden;
       transition: opacity 0.3s ease, visibility 0.3s;
       z-index: 100;
+      min-width: 140px;
     }
 
     #dev-metrics.visible {
-      opacity: 0.7;
+      opacity: 0.85;
       visibility: visible;
     }
 
@@ -683,7 +684,7 @@
     .dev-metric {
       display: flex;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
       padding: 2px 0;
     }
 
@@ -693,6 +694,7 @@
 
     .dev-metric-value {
       font-weight: 600;
+      text-align: right;
     }
   </style>
 </head>
@@ -732,12 +734,40 @@
   <div id="formatter-tooltip" class="formatter-tooltip"></div>
   <div id="dev-metrics">
     <div class="dev-metric">
+      <span class="dev-metric-label">language</span>
+      <span class="dev-metric-value" id="metric-language">—</span>
+    </div>
+    <div class="dev-metric">
       <span class="dev-metric-label">relevance</span>
       <span class="dev-metric-value" id="metric-relevance">—</span>
     </div>
     <div class="dev-metric">
       <span class="dev-metric-label">per char</span>
       <span class="dev-metric-value" id="metric-per-char">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">threshold</span>
+      <span class="dev-metric-value" id="metric-threshold">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">2nd best</span>
+      <span class="dev-metric-value" id="metric-second-best">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">2nd rel</span>
+      <span class="dev-metric-value" id="metric-second-relevance">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">2nd/char</span>
+      <span class="dev-metric-value" id="metric-second-per-char">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">illegal</span>
+      <span class="dev-metric-value" id="metric-illegal">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">chars</span>
+      <span class="dev-metric-value" id="metric-chars">—</span>
     </div>
   </div>
   <script>
@@ -1078,22 +1108,66 @@
     // Developer mode state
     let developerMode = localStorage.getItem(DEV_MODE_KEY) === 'true';
     const devMetrics = document.getElementById('dev-metrics');
+    const metricLanguage = document.getElementById('metric-language');
     const metricRelevance = document.getElementById('metric-relevance');
     const metricPerChar = document.getElementById('metric-per-char');
+    const metricThreshold = document.getElementById('metric-threshold');
+    const metricSecondBest = document.getElementById('metric-second-best');
+    const metricSecondRelevance = document.getElementById('metric-second-relevance');
+    const metricSecondPerChar = document.getElementById('metric-second-per-char');
+    const metricIllegal = document.getElementById('metric-illegal');
+    const metricChars = document.getElementById('metric-chars');
     
-    // Current relevance metrics
-    let lastRelevance = null;
-    let lastRelevancePerChar = null;
+    // Current metrics from last highlight result
+    let lastMetrics = {
+      language: null,
+      relevance: null,
+      relevancePerChar: null,
+      meetsThreshold: null,
+      secondBest: null,
+      secondRelevance: null,
+      secondPerChar: null,
+      illegal: null,
+      charCount: null
+    };
 
     // Update developer metrics display
-    function updateDevMetrics(relevance, text) {
-      lastRelevance = relevance;
-      lastRelevancePerChar = text.length > 0 ? relevance / text.length : 0;
+    function updateDevMetrics(result, text) {
+      const charCount = text.length;
+      const relevance = result.relevance || 0;
+      const relevancePerChar = charCount > 0 ? relevance / charCount : 0;
+      const meetsThreshold = relevancePerChar >= RELEVANCE_PER_CHAR_THRESHOLD;
+      const secondRelevance = result.secondBest?.relevance || null;
+      const secondPerChar = (secondRelevance !== null && charCount > 0) ? secondRelevance / charCount : null;
+      
+      lastMetrics = {
+        language: result.language || null,
+        relevance: relevance,
+        relevancePerChar: relevancePerChar,
+        meetsThreshold: meetsThreshold,
+        secondBest: result.secondBest?.language || null,
+        secondRelevance: secondRelevance,
+        secondPerChar: secondPerChar,
+        illegal: result.illegal || false,
+        charCount: charCount
+      };
       
       if (developerMode) {
-        metricRelevance.textContent = lastRelevance !== null ? lastRelevance.toFixed(1) : '—';
-        metricPerChar.textContent = lastRelevancePerChar !== null ? lastRelevancePerChar.toFixed(4) : '—';
+        refreshDevMetricsDisplay();
       }
+    }
+    
+    // Refresh the dev metrics display from lastMetrics
+    function refreshDevMetricsDisplay() {
+      metricLanguage.textContent = lastMetrics.language || '—';
+      metricRelevance.textContent = lastMetrics.relevance !== null ? lastMetrics.relevance.toFixed(1) : '—';
+      metricPerChar.textContent = lastMetrics.relevancePerChar !== null ? lastMetrics.relevancePerChar.toFixed(4) : '—';
+      metricThreshold.textContent = lastMetrics.meetsThreshold !== null ? (lastMetrics.meetsThreshold ? '✓ pass' : '✗ fail') : '—';
+      metricSecondBest.textContent = lastMetrics.secondBest || '—';
+      metricSecondRelevance.textContent = lastMetrics.secondRelevance !== null ? lastMetrics.secondRelevance.toFixed(1) : '—';
+      metricSecondPerChar.textContent = lastMetrics.secondPerChar !== null ? lastMetrics.secondPerChar.toFixed(4) : '—';
+      metricIllegal.textContent = lastMetrics.illegal ? 'yes' : 'no';
+      metricChars.textContent = lastMetrics.charCount !== null ? lastMetrics.charCount.toLocaleString() : '—';
     }
 
     // Settings menu elements
@@ -1107,8 +1181,7 @@
         devModeToggleSwitch.classList.add('on');
         devMetrics.classList.add('visible');
         // Refresh metrics display
-        metricRelevance.textContent = lastRelevance !== null ? lastRelevance.toFixed(1) : '—';
-        metricPerChar.textContent = lastRelevancePerChar !== null ? lastRelevancePerChar.toFixed(4) : '—';
+        refreshDevMetricsDisplay();
       } else {
         devModeToggleSwitch.classList.remove('on');
         devMetrics.classList.remove('visible');
@@ -1763,7 +1836,7 @@
       if (!text.trim()) {
         currentLanguage = null;
         updateIndicator('plaintext');
-        updateDevMetrics(0, '');
+        updateDevMetrics({}, '');
         return;
       }
 
@@ -1771,16 +1844,18 @@
       if (manualLanguage) {
         try {
           const result = hljs.highlight(text, { language: manualLanguage });
-          updateDevMetrics(result.relevance, text);
+          // For manual highlighting, add language to result since it's not auto-detected
+          result.language = manualLanguage;
+          updateDevMetrics(result, text);
         } catch (e) {
-          updateDevMetrics(0, text);
+          updateDevMetrics({ language: manualLanguage }, text);
         }
         return;
       }
 
       try {
         const result = hljs.highlightAuto(text);
-        updateDevMetrics(result.relevance, text);
+        updateDevMetrics(result, text);
         
         if (meetsConfidenceThreshold(result.relevance, text) && result.language) {
           currentLanguage = result.language;
@@ -1798,7 +1873,7 @@
         highlightLayer.innerHTML = escapeHtml(text);
         highlightLayer.className = '';
         updateIndicator('plaintext');
-        updateDevMetrics(0, text);
+        updateDevMetrics({}, text);
       }
     }
 
