@@ -555,6 +555,145 @@
       font-style: italic;
       opacity: 0.8;
     }
+
+    /* Settings button */
+    #settings-btn {
+      padding: 4px 8px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      background: var(--toggle-bg);
+      border: none;
+      border-radius: 4px;
+      opacity: 0.7;
+      transition: opacity 0.3s ease, background 0.2s ease;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    #settings-btn:hover {
+      background: var(--toggle-hover);
+      opacity: 1;
+    }
+
+    #settings-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    /* Settings menu */
+    #settings-menu {
+      position: fixed;
+      bottom: 44px;
+      right: 16px;
+      background: var(--toggle-bg);
+      border-radius: 6px;
+      padding: 8px 0;
+      min-width: 180px;
+      z-index: 102;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(8px);
+      transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    #settings-menu.open {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .settings-item {
+      padding: 8px 14px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 11px;
+      color: var(--fg);
+      cursor: pointer;
+      transition: background 0.1s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .settings-item:hover {
+      background: var(--toggle-hover);
+    }
+
+    .settings-toggle {
+      width: 32px;
+      height: 18px;
+      background: #444;
+      border-radius: 9px;
+      position: relative;
+      transition: background 0.2s ease;
+    }
+
+    .settings-toggle.on {
+      background: #4a9;
+    }
+
+    .settings-toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: var(--fg);
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+    }
+
+    .settings-toggle.on::after {
+      transform: translateX(14px);
+    }
+
+    /* Developer metrics panel */
+    #dev-metrics {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      background: var(--toggle-bg);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-family: Monaco, Menlo, monospace;
+      font-size: 10px;
+      color: var(--fg);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s;
+      z-index: 100;
+    }
+
+    #dev-metrics.visible {
+      opacity: 0.7;
+      visibility: visible;
+    }
+
+    #dev-metrics:hover {
+      opacity: 1;
+    }
+
+    .dev-metric {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 2px 0;
+    }
+
+    .dev-metric-label {
+      opacity: 0.6;
+    }
+
+    .dev-metric-value {
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -583,11 +722,28 @@
     </button>
     <div id="language-indicator" title="Change language">plaintext</div>
   </div>
+  <div id="settings-menu">
+    <div class="settings-item" id="dev-mode-toggle">
+      <span>Developer Mode</span>
+      <div class="settings-toggle"></div>
+    </div>
+  </div>
   <div id="language-picker"></div>
   <div id="formatter-tooltip" class="formatter-tooltip"></div>
+  <div id="dev-metrics">
+    <div class="dev-metric">
+      <span class="dev-metric-label">relevance</span>
+      <span class="dev-metric-value" id="metric-relevance">—</span>
+    </div>
+    <div class="dev-metric">
+      <span class="dev-metric-label">per char</span>
+      <span class="dev-metric-value" id="metric-per-char">—</span>
+    </div>
+  </div>
   <script>
     const hljs = require('highlight.js');
     const { exec, spawn } = require('child_process');
+    const { ipcRenderer } = require('electron');
     
     // ===== STORAGE KEYS =====
     const KEY = 'blackboard-content';
@@ -595,6 +751,7 @@
     const HIGHLIGHT_KEY = 'blackboard-highlighting';
     const TABS_KEY = 'blackboard-tabs';
     const ACTIVE_TAB_KEY = 'blackboard-active-tab';
+    const DEV_MODE_KEY = 'blackboard-dev-mode';
     
     const tabBar = document.getElementById('tab-bar');
     const addTabBtn = document.getElementById('add-tab');
@@ -857,6 +1014,11 @@
         const prevIndex = (currentIndex - 1 + tabs.length) % tabs.length;
         switchToTab(tabs[prevIndex].id);
       }
+      // Cmd+D to toggle developer mode
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+        e.preventDefault();
+        toggleDevMode();
+      }
     });
     
     // ===== END TAB MANAGEMENT =====
@@ -901,9 +1063,84 @@
     // Highlighting enabled state
     let highlightingEnabled = localStorage.getItem(HIGHLIGHT_KEY) !== 'false';
 
-    // Minimum relevance score to apply syntax highlighting
+    // Minimum relevance-per-character to apply syntax highlighting
     // Higher = more confident detection required
-    const CONFIDENCE_THRESHOLD = 5;
+    const RELEVANCE_PER_CHAR_THRESHOLD = 0.05;
+
+    // Check if detected language meets confidence threshold
+    function meetsConfidenceThreshold(relevance, text) {
+      const charCount = text.length;
+      if (charCount === 0) return false;
+      const relevancePerChar = relevance / charCount;
+      return relevancePerChar >= RELEVANCE_PER_CHAR_THRESHOLD;
+    }
+
+    // Developer mode state
+    let developerMode = localStorage.getItem(DEV_MODE_KEY) === 'true';
+    const devMetrics = document.getElementById('dev-metrics');
+    const metricRelevance = document.getElementById('metric-relevance');
+    const metricPerChar = document.getElementById('metric-per-char');
+    
+    // Current relevance metrics
+    let lastRelevance = null;
+    let lastRelevancePerChar = null;
+
+    // Update developer metrics display
+    function updateDevMetrics(relevance, text) {
+      lastRelevance = relevance;
+      lastRelevancePerChar = text.length > 0 ? relevance / text.length : 0;
+      
+      if (developerMode) {
+        metricRelevance.textContent = lastRelevance !== null ? lastRelevance.toFixed(1) : '—';
+        metricPerChar.textContent = lastRelevancePerChar !== null ? lastRelevancePerChar.toFixed(4) : '—';
+      }
+    }
+
+    // Settings menu elements
+    const settingsMenu = document.getElementById('settings-menu');
+    const devModeToggle = document.getElementById('dev-mode-toggle');
+    const devModeToggleSwitch = devModeToggle.querySelector('.settings-toggle');
+
+    // Update developer mode UI
+    function updateDevModeUI() {
+      if (developerMode) {
+        devModeToggleSwitch.classList.add('on');
+        devMetrics.classList.add('visible');
+        // Refresh metrics display
+        metricRelevance.textContent = lastRelevance !== null ? lastRelevance.toFixed(1) : '—';
+        metricPerChar.textContent = lastRelevancePerChar !== null ? lastRelevancePerChar.toFixed(4) : '—';
+      } else {
+        devModeToggleSwitch.classList.remove('on');
+        devMetrics.classList.remove('visible');
+      }
+    }
+
+    // Toggle developer mode
+    function toggleDevMode() {
+      developerMode = !developerMode;
+      localStorage.setItem(DEV_MODE_KEY, developerMode ? 'true' : 'false');
+      updateDevModeUI();
+    }
+
+    // Dev mode toggle click handler
+    devModeToggle.addEventListener('click', () => {
+      toggleDevMode();
+    });
+
+    // Close settings menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!settingsMenu.contains(e.target)) {
+        settingsMenu.classList.remove('open');
+      }
+    });
+
+    // Listen for settings menu command from main process (Blackboard > Settings)
+    ipcRenderer.on('open-settings', () => {
+      settingsMenu.classList.toggle('open');
+    });
+
+    // Initialize developer mode UI
+    updateDevModeUI();
 
     // Available languages for the picker (alphabetical)
     const AVAILABLE_LANGUAGES = [
@@ -1430,7 +1667,7 @@
         } else {
           try {
             const result = hljs.highlightAuto(text);
-            if (result.relevance >= CONFIDENCE_THRESHOLD && result.language) {
+            if (meetsConfidenceThreshold(result.relevance, text) && result.language) {
               currentLanguage = result.language;
               updateIndicator(result.language);
             } else {
@@ -1521,18 +1758,26 @@
       if (!text.trim()) {
         currentLanguage = null;
         updateIndicator('plaintext');
+        updateDevMetrics(0, '');
         return;
       }
 
-      // Skip auto-detection if manual language is set
+      // If manual language is set, show metrics for that language
       if (manualLanguage) {
+        try {
+          const result = hljs.highlight(text, { language: manualLanguage });
+          updateDevMetrics(result.relevance, text);
+        } catch (e) {
+          updateDevMetrics(0, text);
+        }
         return;
       }
 
       try {
         const result = hljs.highlightAuto(text);
+        updateDevMetrics(result.relevance, text);
         
-        if (result.relevance >= CONFIDENCE_THRESHOLD && result.language) {
+        if (meetsConfidenceThreshold(result.relevance, text) && result.language) {
           currentLanguage = result.language;
           highlightLayer.innerHTML = result.value;
           highlightLayer.className = `hljs language-${result.language}`;
@@ -1548,6 +1793,7 @@
         highlightLayer.innerHTML = escapeHtml(text);
         highlightLayer.className = '';
         updateIndicator('plaintext');
+        updateDevMetrics(0, text);
       }
     }
 
