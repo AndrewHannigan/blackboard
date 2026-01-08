@@ -116,6 +116,22 @@ html, body {
   white-space: nowrap;
 }
 
+/* Tab dragging state */
+.tab.dragging {
+  opacity: 0.9;
+  background: var(--toggle-hover);
+  cursor: grabbing;
+  z-index: 10;
+}
+
+.tab:not(.dragging) {
+  cursor: grab;
+}
+
+#tab-bar.dragging .tab:not(.dragging) {
+  pointer-events: none;
+}
+
 .tab-name-input {
   background: transparent;
   border: none;

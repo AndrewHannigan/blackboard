@@ -92,7 +92,11 @@ function renderTabs() {
       tabEl.appendChild(closeBtn);
     }
     
-    tabEl.addEventListener('click', () => switchToTab(tab.id));
+    tabEl.addEventListener('click', () => {
+      // Don't switch if we just finished dragging
+      if (wasDragging) return;
+      switchToTab(tab.id);
+    });
     
     // Double-click to edit name (only on active tab)
     tabEl.addEventListener('dblclick', (e) => {
@@ -100,6 +104,11 @@ function renderTabs() {
       if (tab.id === activeTabId) {
         startEditingTabName(tab.id, tabEl);
       }
+    });
+    
+    // Drag to reorder
+    tabEl.addEventListener('mousedown', (e) => {
+      startTabDrag(e, tabEl, tab.id);
     });
     
     // Insert before the add button
@@ -247,6 +256,206 @@ function closeTab(tabId) {
 
 // Add tab button handler
 addTabBtn.addEventListener('click', createNewTab);
+
+// ===== TAB DRAG REORDERING =====
+let dragState = null;
+let wasDragging = false;
+
+function startTabDrag(e, tabEl, tabId) {
+  // Only start drag on left mouse button
+  if (e.button !== 0) return;
+  
+  // Don't start drag if clicking close button or input
+  if (e.target.closest('.tab-close') || e.target.closest('.tab-name-input')) return;
+  
+  const tabRect = tabEl.getBoundingClientRect();
+  const tabBarRect = tabBar.getBoundingClientRect();
+  
+  // Get all tab elements and their positions
+  const tabEls = Array.from(tabBar.querySelectorAll('.tab'));
+  const tabIndex = tabEls.indexOf(tabEl);
+  
+  dragState = {
+    tabId,
+    tabEl,
+    tabIndex,
+    startX: e.clientX,
+    tabStartLeft: tabRect.left,
+    tabWidth: tabRect.width,
+    tabBarLeft: tabBarRect.left,
+    tabBarRight: tabBarRect.right - (addTabBtn.getBoundingClientRect().width),
+    offsetX: e.clientX - tabRect.left,
+    hasMoved: false,
+    tabElements: tabEls.map(t => ({
+      el: t,
+      left: t.getBoundingClientRect().left,
+      width: t.getBoundingClientRect().width,
+      center: t.getBoundingClientRect().left + t.getBoundingClientRect().width / 2
+    }))
+  };
+  
+  e.preventDefault();
+}
+
+function handleTabDrag(e) {
+  if (!dragState) return;
+  
+  const { tabEl, tabIndex, startX, tabWidth, tabBarLeft, tabBarRight, tabElements } = dragState;
+  
+  // Calculate how far we've moved
+  const deltaX = e.clientX - startX;
+  
+  // Only start visual drag after moving 3px (to distinguish from clicks)
+  if (!dragState.hasMoved && Math.abs(deltaX) < 3) return;
+  
+  // Initialize drag visuals on first significant move
+  if (!dragState.hasMoved) {
+    dragState.hasMoved = true;
+    tabEl.classList.add('dragging');
+    tabBar.classList.add('dragging');
+    tabEl.style.zIndex = '10';
+    tabEl.style.position = 'relative';
+    
+    // Add transitions to other tabs for smooth visual
+    tabElements.forEach((t, i) => {
+      if (i !== tabIndex) {
+        t.el.style.transition = 'transform 0.15s ease';
+      }
+    });
+  }
+  
+  // Calculate the new left position, constrained to the tab bar
+  const newLeft = dragState.tabStartLeft + deltaX;
+  const minLeft = tabBarLeft;
+  const maxLeft = tabBarRight - tabWidth;
+  const constrainedLeft = Math.max(minLeft, Math.min(maxLeft, newLeft));
+  
+  // Calculate the offset from the original position
+  const translateX = constrainedLeft - dragState.tabStartLeft;
+  tabEl.style.transform = `translateX(${translateX}px)`;
+  
+  // Calculate the edges of the dragged tab
+  const dragLeft = constrainedLeft;
+  const dragRight = constrainedLeft + tabWidth;
+  
+  // Find where we should insert based on drag position
+  // Trigger swap when the edge of dragged tab enters ~25% into the adjacent tab
+  let newIndex = tabIndex;
+  tabElements.forEach((t, i) => {
+    if (i === tabIndex) return;
+    
+    if (i < tabIndex && dragLeft < t.left + t.width * 0.75) {
+      // Moving left: trigger when our left edge is 25% into the tab
+      newIndex = Math.min(newIndex, i);
+    } else if (i > tabIndex && dragRight > t.left + t.width * 0.25) {
+      // Moving right: trigger when our right edge is 25% into the tab
+      newIndex = Math.max(newIndex, i);
+    }
+  });
+  
+  dragState.currentIndex = newIndex;
+  
+  // Shift other tabs to make room
+  tabElements.forEach((t, i) => {
+    if (i === tabIndex) return;
+    
+    if (tabIndex < newIndex) {
+      // Dragging right: shift tabs left if they're between old and new position
+      if (i > tabIndex && i <= newIndex) {
+        t.el.style.transform = `translateX(${-tabWidth}px)`;
+      } else {
+        t.el.style.transform = '';
+      }
+    } else if (tabIndex > newIndex) {
+      // Dragging left: shift tabs right if they're between new and old position
+      if (i >= newIndex && i < tabIndex) {
+        t.el.style.transform = `translateX(${tabWidth}px)`;
+      } else {
+        t.el.style.transform = '';
+      }
+    } else {
+      t.el.style.transform = '';
+    }
+  });
+}
+
+function endTabDrag(e) {
+  if (!dragState) return;
+  
+  const { tabEl, tabId, tabIndex, tabElements, hasMoved, tabStartLeft } = dragState;
+  const newIndex = dragState.currentIndex !== undefined ? dragState.currentIndex : tabIndex;
+  
+  // Track if we were actually dragging (for click prevention)
+  wasDragging = hasMoved;
+  
+  if (hasMoved) {
+    // Calculate where the tab should animate to
+    let targetLeft;
+    if (newIndex !== tabIndex) {
+      // Moving to a new position - animate to where that slot is
+      targetLeft = tabElements[newIndex].left;
+    } else {
+      // Returning to original position
+      targetLeft = tabStartLeft;
+    }
+    
+    const currentTransform = tabEl.style.transform;
+    const currentX = currentTransform ? parseFloat(currentTransform.replace(/[^-\d.]/g, '')) || 0 : 0;
+    const targetX = targetLeft - tabStartLeft;
+    
+    // Animate the dragged tab to its final position
+    tabEl.style.transition = 'transform 0.15s ease';
+    tabEl.style.transform = `translateX(${targetX}px)`;
+    
+    // After animation completes, reset and re-render
+    setTimeout(() => {
+      tabEl.classList.remove('dragging');
+      tabBar.classList.remove('dragging');
+      tabEl.style.zIndex = '';
+      tabEl.style.position = '';
+      tabEl.style.transform = '';
+      tabEl.style.transition = '';
+      
+      tabElements.forEach(t => {
+        t.el.style.transform = '';
+        t.el.style.transition = '';
+      });
+      
+      // If position changed, reorder the tabs array
+      if (newIndex !== tabIndex) {
+        const tabData = tabs.find(t => t.id === tabId);
+        if (tabData) {
+          const oldIdx = tabs.indexOf(tabData);
+          tabs.splice(oldIdx, 1);
+          tabs.splice(newIndex, 0, tabData);
+          saveTabs();
+          renderTabs();
+        }
+      }
+    }, 150);
+  } else {
+    // No drag happened, just clean up
+    tabEl.classList.remove('dragging');
+    tabBar.classList.remove('dragging');
+    tabEl.style.zIndex = '';
+    tabEl.style.position = '';
+    tabEl.style.transform = '';
+    
+    tabElements.forEach(t => {
+      t.el.style.transform = '';
+      t.el.style.transition = '';
+    });
+  }
+  
+  dragState = null;
+  
+  // Reset wasDragging after a short delay to allow click event to check it
+  setTimeout(() => { wasDragging = false; }, 0);
+}
+
+// Global mouse event listeners for drag
+document.addEventListener('mousemove', handleTabDrag);
+document.addEventListener('mouseup', endTabDrag);
 
 // Keyboard shortcuts for tabs
 document.addEventListener('keydown', (e) => {
