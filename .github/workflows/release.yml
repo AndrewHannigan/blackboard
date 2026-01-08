@@ -26,6 +26,12 @@ jobs:
         run: npm ci
 
       - name: Build for macOS
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx electron-builder --mac --publish never
 
       - name: Upload macOS artifacts
@@ -156,11 +162,6 @@ jobs:
           
             app "Blackboard.app"
             binary "#{appdir}/Blackboard.app/Contents/Resources/app.asar.unpacked/bin/bb"
-          
-            caveats <<~EOS
-              Blackboard is not signed. To open it, run:
-                xattr -cr /Applications/Blackboard.app
-            EOS
           
             zap trash: [
               "~/Library/Application Support/Blackboard",
