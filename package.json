@@ -74,6 +74,7 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
+    "autolinker": "^4.1.5",
     "highlight.js": "^11.11.1",
     "prettier": "^3.4.2"
   }

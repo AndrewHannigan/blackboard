@@ -1,6 +1,20 @@
 const hljs = require('highlight.js');
+const Autolinker = require('autolinker');
 const { exec, spawn } = require('child_process');
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, shell } = require('electron');
+
+// Configure Autolinker for plaintext mode
+const autolinker = new Autolinker({
+  urls: true,
+  email: true,
+  phone: true,
+  mention: false,
+  hashtag: false,
+  stripPrefix: false,
+  stripTrailingSlash: false,
+  newWindow: false,
+  className: 'autolink'
+});
 
 // ===== STORAGE KEYS =====
 const KEY = 'blackboard-content';
@@ -1174,6 +1188,64 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Apply autolinker to plaintext (escapes HTML first, then adds links)
+function applyAutolinker(text) {
+  // First escape HTML, then let Autolinker find and link URLs, emails, phones
+  const escaped = escapeHtml(text);
+  return autolinker.link(escaped);
+}
+
+// Check if current mode should use autolinker (plaintext mode)
+function shouldUseAutolinker() {
+  return manualLanguage === 'plaintext' || 
+         (manualLanguage === null && currentLanguage === null);
+}
+
+// Update pointer-events on highlight layer based on whether we have links
+function updateHighlightLayerPointerEvents() {
+  const hasLinks = highlightLayer.querySelector('a.autolink') !== null;
+  const highlightPre = document.getElementById('highlight-layer');
+  if (hasLinks) {
+    highlightPre.classList.add('has-links');
+  } else {
+    highlightPre.classList.remove('has-links');
+  }
+}
+
+// Handle Cmd+Click (Mac) or Ctrl+Click (Windows/Linux) to open links
+editor.addEventListener('click', (e) => {
+  // Only handle if Cmd (Mac) or Ctrl (Windows/Linux) is pressed
+  if (!(isMac ? e.metaKey : e.ctrlKey)) return;
+  
+  // Only works in plaintext mode
+  if (!shouldUseAutolinker()) return;
+  
+  const text = editor.value;
+  if (!text.trim()) return;
+  
+  // Get cursor position at click
+  const cursorPos = editor.selectionStart;
+  
+  // Use Autolinker.parse to find all matches
+  const matches = Autolinker.parse(text, {
+    urls: true,
+    email: true,
+    phone: true
+  });
+  
+  // Check if cursor is within any match
+  for (const match of matches) {
+    const start = match.offset;
+    const end = match.offset + match.matchedText.length;
+    
+    if (cursorPos >= start && cursorPos <= end) {
+      e.preventDefault();
+      shell.openExternal(match.getAnchorHref());
+      return;
+    }
+  }
+});
+
 // Debounce function for performance
 function debounce(fn, delay) {
   let timeout;
@@ -1220,51 +1292,70 @@ function applyHighlighting() {
     highlightLayer.className = '';
     currentLanguage = null;
     updateIndicator('plaintext');
+    updateHighlightLayerPointerEvents();
     return;
   }
 
-  // If highlighting is disabled, show plain text
+  // If highlighting is disabled, show plain text (with autolinker if applicable)
   if (!highlightingEnabled) {
-    highlightLayer.innerHTML = escapeHtml(text);
-    highlightLayer.className = '';
     // Still detect language for indicator but don't highlight
     if (manualLanguage) {
+      if (manualLanguage === 'plaintext') {
+        highlightLayer.innerHTML = applyAutolinker(text);
+      } else {
+        highlightLayer.innerHTML = escapeHtml(text);
+      }
+      highlightLayer.className = '';
       updateIndicator(manualLanguage);
     } else {
       try {
         const result = hljs.highlightAuto(text);
         if (meetsConfidenceThreshold(result.relevance, text) && result.language) {
           currentLanguage = result.language;
+          highlightLayer.innerHTML = escapeHtml(text);
           updateIndicator(result.language);
         } else {
           currentLanguage = null;
+          highlightLayer.innerHTML = applyAutolinker(text);
           updateIndicator('plaintext');
         }
       } catch (e) {
         currentLanguage = null;
+        highlightLayer.innerHTML = applyAutolinker(text);
         updateIndicator('plaintext');
       }
     }
+    highlightLayer.className = '';
+    updateHighlightLayerPointerEvents();
     return;
   }
 
   if (manualLanguage) {
     // Use manually selected language
-    try {
-      const result = hljs.highlight(text, { language: manualLanguage });
-      currentLanguage = manualLanguage;
-      highlightLayer.innerHTML = result.value;
-      highlightLayer.className = `hljs language-${manualLanguage}`;
-      updateIndicator(manualLanguage);
-    } catch (e) {
-      highlightLayer.innerHTML = escapeHtml(text);
+    if (manualLanguage === 'plaintext') {
+      // Plaintext with autolinker
+      highlightLayer.innerHTML = applyAutolinker(text);
       highlightLayer.className = '';
+      currentLanguage = null;
       updateIndicator('plaintext');
+    } else {
+      try {
+        const result = hljs.highlight(text, { language: manualLanguage });
+        currentLanguage = manualLanguage;
+        highlightLayer.innerHTML = result.value;
+        highlightLayer.className = `hljs language-${manualLanguage}`;
+        updateIndicator(manualLanguage);
+      } catch (e) {
+        highlightLayer.innerHTML = applyAutolinker(text);
+        highlightLayer.className = '';
+        updateIndicator('plaintext');
+      }
     }
   } else {
     // Auto-detect
     detectAndHighlight();
   }
+  updateHighlightLayerPointerEvents();
 }
 
 // Update the language indicator display
@@ -1298,28 +1389,35 @@ function updateDisplayImmediate() {
     highlightLayer.className = '';
     currentLanguage = null;
     updateIndicator('plaintext');
+    updateHighlightLayerPointerEvents();
     return;
   }
 
-  // If highlighting is disabled, show plain text
+  // If highlighting is disabled, show plain text (with autolinker for plaintext)
   if (!highlightingEnabled) {
-    highlightLayer.innerHTML = escapeHtml(text);
+    if (shouldUseAutolinker()) {
+      highlightLayer.innerHTML = applyAutolinker(text);
+    } else {
+      highlightLayer.innerHTML = escapeHtml(text);
+    }
+    updateHighlightLayerPointerEvents();
     return;
   }
 
   const langToUse = manualLanguage || currentLanguage;
-  if (langToUse) {
+  if (langToUse && langToUse !== 'plaintext') {
     // Re-apply known language highlighting immediately
     try {
       const result = hljs.highlight(text, { language: langToUse });
       highlightLayer.innerHTML = result.value;
     } catch (e) {
-      highlightLayer.innerHTML = escapeHtml(text);
+      highlightLayer.innerHTML = applyAutolinker(text);
     }
   } else {
-    // No language detected yet, show plain text
-    highlightLayer.innerHTML = escapeHtml(text);
+    // No language detected yet or plaintext, use autolinker
+    highlightLayer.innerHTML = applyAutolinker(text);
   }
+  updateHighlightLayerPointerEvents();
 }
 
 // Expensive language detection (debounced)
@@ -1330,6 +1428,7 @@ function detectAndHighlight() {
     currentLanguage = null;
     updateIndicator('plaintext');
     updateDevMetrics({}, '');
+    updateHighlightLayerPointerEvents();
     return;
   }
 
@@ -1343,6 +1442,7 @@ function detectAndHighlight() {
     } catch (e) {
       updateDevMetrics({ language: manualLanguage }, text);
     }
+    updateHighlightLayerPointerEvents();
     return;
   }
 
@@ -1357,17 +1457,18 @@ function detectAndHighlight() {
       updateIndicator(result.language);
     } else {
       currentLanguage = null;
-      highlightLayer.innerHTML = escapeHtml(text);
+      highlightLayer.innerHTML = applyAutolinker(text);
       highlightLayer.className = '';
       updateIndicator('plaintext');
     }
   } catch (e) {
     currentLanguage = null;
-    highlightLayer.innerHTML = escapeHtml(text);
+    highlightLayer.innerHTML = applyAutolinker(text);
     highlightLayer.className = '';
     updateIndicator('plaintext');
     updateDevMetrics({}, text);
   }
+  updateHighlightLayerPointerEvents();
 }
 
 // Sync scroll between editor and highlight layer

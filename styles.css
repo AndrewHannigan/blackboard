@@ -218,6 +218,25 @@ html, body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
+/* Autolinked content styling (URLs, emails, phone numbers in plaintext mode) */
+#highlight-layer a.autolink {
+  color: #6bb3ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(107, 179, 255, 0.4);
+  text-underline-offset: 2px;
+}
+
+/* Different colors for different link types */
+#highlight-layer a.autolink-email {
+  color: #a8d08d;
+  text-decoration-color: rgba(168, 208, 141, 0.4);
+}
+
+#highlight-layer a.autolink-phone {
+  color: #dda0dd;
+  text-decoration-color: rgba(221, 160, 221, 0.4);
+}
+
 #highlight-layer code {
   font-family: inherit;
   font-size: inherit;
