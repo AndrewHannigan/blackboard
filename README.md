@@ -16,7 +16,7 @@ No syncing.
 
 Just a little blackboard that's always the way you left it.
 
-<img src="assets/demo.gif" alt="Blackboard demo" width="100%">
+<img src="assets/demo.gif" alt="Blackboard demo" width="70%">
 
 
 
