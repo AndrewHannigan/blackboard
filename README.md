@@ -1,19 +1,19 @@
 # Blackboard
 
-Blackboard is an app for editing scratch text on the fly.
+Blackboard is minimal scratchpad for code and thoughts.
 
 There's no save mechanism. Text just persists between sessions.
 
 Write a SQL snippet, draft a slack message, tweak a unix command, etc.
 
-No startup menus.
-No exit confirmations.
-No "unsaved" dot.
-No syncing.
+No startup menus.  
+No exit confirmations.  
+No "unsaved" dot.  
+No syncing.  
 
 Just a little blackboard that's always the way you left it.
 
-<img src="assets/image.png" alt="Blackboard app screenshot" width="50%">
+<img src="assets/demo.gif" alt="Blackboard demo" width="50%">
 
 ## Install 
 
