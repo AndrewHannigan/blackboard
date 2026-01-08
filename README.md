@@ -1,7 +1,11 @@
 <div align="center">
 
-
 # Blackboard
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/AndrewHannigan/blackboard?color=blue)](https://github.com/AndrewHannigan/blackboard/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey.svg)](https://github.com/AndrewHannigan/blackboard/releases)
+[![GitHub Downloads](https://img.shields.io/github/downloads/AndrewHannigan/blackboard/total?color=green)](https://github.com/AndrewHannigan/blackboard/releases)
 
 Blackboard is a minimal scratchpad for code and thoughts.
 
