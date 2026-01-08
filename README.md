@@ -31,11 +31,7 @@ Just a little blackboard that's always the way you left it.
 ### Homebrew (MacOS)
 
 1. Run `brew install --cask andrewhannigan/tap/blackboard`
-2. Run this once in a terminal to bypass Gatekeeper
-   ```bash
-   xattr -cr /Applications/Blackboard.app
-   ```
-3. Open Blackboard
+2. Open Blackboard
 
 ### Disk image installer (MacOS and Windows)
 1. Download the latest `.dmg` from [Releases](https://github.com/AndrewHannigan/blackboard/releases)
