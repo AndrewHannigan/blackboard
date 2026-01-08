@@ -68,8 +68,35 @@ jobs:
           path: |
             dist/Blackboard-*-win.exe
 
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for Linux
+        run: npx electron-builder --linux --publish never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: |
+            dist/Blackboard-*.AppImage
+            dist/Blackboard-*.deb
+
   release:
-    needs: [build-mac, build-windows]
+    needs: [build-mac, build-windows, build-linux]
     runs-on: ubuntu-latest
     
     steps:
@@ -97,6 +124,8 @@ jobs:
             dist/Blackboard-*.dmg
             dist/Blackboard-*.zip
             dist/Blackboard-*.exe
+            dist/Blackboard-*.AppImage
+            dist/Blackboard-*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

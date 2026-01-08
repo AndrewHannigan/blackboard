@@ -11,6 +11,7 @@
     "build": "electron-builder --mac --dir",
     "install-local": "electron-builder --mac --dir && open dist/mac-arm64/Blackboard.app",
     "dist": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
     "release": "./scripts/release.sh"
   },
   "build": {
@@ -32,6 +33,15 @@
       ],
       "icon": "build/icon.ico",
       "artifactName": "${productName}-${version}-win.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility;TextEditor",
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
     "files": [
       "main.js",
