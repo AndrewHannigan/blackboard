@@ -41,6 +41,7 @@
       ],
       "category": "Utility;TextEditor",
       "icon": "build/icon.png",
+      "maintainer": "Andrew Hannigan <andrewhannigan@users.noreply.github.com>",
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
     "files": [
