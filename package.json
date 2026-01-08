@@ -29,8 +29,9 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": true
+      "notarize": false
     },
+    "afterSign": "scripts/notarize.js",
     "win": {
       "target": [
         "nsis",
@@ -75,6 +76,7 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@electron/notarize": "^3.1.1",
     "electron": "^28.3.3",
     "electron-builder": "^24.9.1"
   },
