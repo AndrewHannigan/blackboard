@@ -1,6 +1,9 @@
+<div align="center">
+
+
 # Blackboard
 
-Blackboard is minimal scratchpad for code and thoughts.
+Blackboard is a minimal scratchpad for code and thoughts.
 
 There's no save mechanism. Text just persists between sessions.
 
@@ -13,7 +16,11 @@ No syncing.
 
 Just a little blackboard that's always the way you left it.
 
-<img src="assets/demo.gif" alt="Blackboard demo" width="50%">
+<img src="assets/demo.gif" alt="Blackboard demo" width="100%">
+
+
+
+</div>
 
 ## Install 
 
