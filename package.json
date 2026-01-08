@@ -2,7 +2,7 @@
   "name": "blackboard",
   "version": "0.9.10",
   "description": "The minimum text editor.",
-  "main": "main.js",
+  "main": "src/main.js",
   "bin": {
     "bb": "./bin/bb"
   },
@@ -51,10 +51,10 @@
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
     "files": [
-      "main.js",
-      "index.html",
-      "styles.css",
-      "renderer.js",
+      "src/main.js",
+      "src/index.html",
+      "src/styles.css",
+      "src/renderer.js",
       "bin/bb",
       "node_modules/highlight.js/lib/**/*",
       "node_modules/highlight.js/styles/github-dark.css",

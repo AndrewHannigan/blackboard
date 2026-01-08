@@ -1,5 +1,6 @@
 const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
 const http = require('http');
+const path = require('path');
 
 const CLI_PORT = 45678;
 const CLI_HOST = '127.0.0.1';
@@ -23,7 +24,7 @@ function createWindow() {
     mainWindow.show();
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
   // Open external links in default browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
