@@ -1,4 +1,4 @@
-<div align="center">
+<div align="left">
 
 # Blackboard
 
@@ -26,18 +26,19 @@ Just a little blackboard that's always the way you left it.
 
 </div>
 
-## Install 
+## Installation
+```
+brew install --cask andrewhannigan/tap/blackboard
+```
 
-### Homebrew (MacOS)
+## Features
 
-1. Run `brew install --cask andrewhannigan/tap/blackboard`
-2. Open Blackboard
+- **Confidence-based syntax highlighting** — Language detection that only kicks in when it's sure. Tuned relevance thresholds prevent false positives so your grocery list doesn't turn into C++.
+- **One-keystroke formatting** — Ruff for Python, sqlformat for SQL, Prettier (bundled) for JS/TS/JSON/HTML/CSS/Markdown/YAML. Just hit ⌘F.
+- **Clickable links** — URLs, emails, and phone numbers are auto-detected in plaintext. ⌘+Click to open.
+- **CLI integration** — Pipe anything to your blackboard with `echo "hello" | bb`. A local HTTP server syncs content instantly.
+- **Sub-100ms startup** — No framework, no virtual DOM, no build step. Just vanilla JS over Electron. The window shows the moment it's ready.
+- **Lazy-loaded formatters** — Prettier plugins load on first format, not on boot. Cold start stays snappy.
+- **Tabs** — Drag to reorder. Double-click to rename. Hidden until you need them.
 
-### Disk image installer (MacOS and Windows)
-1. Download the latest `.dmg` from [Releases](https://github.com/AndrewHannigan/blackboard/releases)
-2. Open the DMG and drag Blackboard to Applications
-3. Run this once in a terminal to bypass Gatekeeper
-   ```bash
-   xattr -cr /Applications/Blackboard.app
-   ```
-4. Open Blackboard
+
