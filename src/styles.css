@@ -432,7 +432,7 @@ html, body {
 
 .help-shortcut kbd .shift {
   font-size: 13px;
-  vertical-align: -1px;
+  vertical-align: 0px;
 }
 
 .help-tip {
@@ -876,6 +876,23 @@ html, body {
   cursor: pointer;
   user-select: none;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#history-btn kbd {
+  font-family: inherit;
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 5px;
+  border-radius: 3px;
+  opacity: 0.6;
+}
+
+#history-btn kbd .shift {
+  font-size: 13px;
+  vertical-align: 0px;
 }
 
 #history-btn:hover {

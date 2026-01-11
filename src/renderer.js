@@ -34,6 +34,8 @@ const HISTORY_MAX_PREVIEW_LINES = 50;
 const isMac = process.platform === 'darwin';
 const formatHotkey = isMac ? '⌘F' : 'Ctrl+F';
 document.querySelectorAll('.format-hotkey').forEach(el => el.textContent = formatHotkey);
+const historyHotkey = isMac ? '⌘<span class="shift">⇧</span>H' : 'Ctrl+Shift+H';
+document.querySelectorAll('.history-hotkey').forEach(el => el.innerHTML = historyHotkey);
 
 // ===== HISTORY MANAGEMENT =====
 // Load history from localStorage
