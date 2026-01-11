@@ -2,7 +2,9 @@
 
 ## Overview
 
-Add a "History" button to the lower-left corner of the application. When clicked, it opens a full-screen overlay showing all previously closed tabs as a grid of mini-preview windows with syntax highlighting, sorted by most recently closed first. Users can click any history item to restore it as a new tab.
+Add a "History" button to the lower-left corner of the application. When clicked, it opens a full-screen overlay showing all previously closed tabs as a grid of mini-preview windows with syntax highlighting, sorted by most recently closed first. Users can click any history item to restore it.
+
+**Key concept**: Tabs and history entries are the same entity. A tab has a persistent identity—when closed, it appears in history; when restored, it's the same tab (same ID). Closing it again updates its history entry rather than creating a duplicate.
 
 ---
 
@@ -36,25 +38,35 @@ Each card represents a closed tab and displays:
    - Syntax highlighting preserved (matching how it appeared in the editor)
    - Shows up to 50 lines, dynamically sized to fit the card
    - Readable enough to identify the "shape" of the code (functions, structure, etc.)
-4. **Click action**: Clicking the card restores that tab as a new tab
+4. **Click action**: Clicking the card restores that tab (reopens it with the same identity)
 
 ---
 
 ## Data Model
 
-### History Entry
+### Unified Tab Identity
 
-Each history entry captures:
+Tabs and history entries are the **same entity** in different states:
 
-- Unique identifier
-- Original tab name (may be empty)
-- Full text content of the tab
-- Language setting (auto-detect or manually set)
-- Timestamp when the tab was closed (for sorting and "just closed" calculation)
+- **Open tab**: Currently visible in the tab bar, editable
+- **Closed tab**: Stored in history, viewable in the history overlay
+
+Each tab has a **persistent unique ID** that remains constant throughout its lifecycle, whether it's open, closed, restored, edited, or closed again.
+
+### Tab Entity
+
+Each tab (whether open or closed) has:
+
+- **Unique identifier**: Persistent across open/close cycles (e.g., `tab-1736612345678`)
+- **Name**: User-assigned tab name (may be empty)
+- **Content**: Full text content
+- **Language**: Language setting (auto-detect or manually set)
+- **Closed timestamp** (only for closed tabs): When the tab was last closed, used for sorting and "just closed" calculation
 
 ### History Storage
 
 - Persisted to localStorage (survives app restarts)
+- Contains only closed tabs (open tabs are stored separately)
 - Ordered by most recently closed first
 - Limited to 100 entries to prevent unbounded growth
 
@@ -64,16 +76,18 @@ Each history entry captures:
 
 ### When a Tab is Closed
 
-- The tab's full state (name, content, language) is captured to history
-- History is ordered by most recently closed
+- If this tab ID already exists in history (i.e., it was previously restored): **update** that existing entry with current content, name, language, and new timestamp
+- If this tab ID is new to history: **create** a new entry
+- The updated/new entry moves to the top of history (most recently closed)
 - Oldest entries are removed when the limit is reached
 
 ### When a History Item is Clicked
 
-- A new tab is created with the restored content, name, and language
-- The user is switched to the new tab
+- The tab is restored with the **same ID** it had before
+- The entry is removed from history (it's now an open tab again)
+- The user is switched to the restored tab
 - The history overlay closes
-- The history entry remains in history (allowing multiple restores of the same tab)
+- If closed again later, it will update its existing history slot (or create one if history was cleared)
 
 ### "Just Closed" Indicator
 
@@ -123,3 +137,4 @@ Each history entry captures:
 4. **Very long titles**: Truncated with ellipsis
 5. **History full**: Oldest entries automatically removed when limit reached
 6. **No title and no content**: Still show the card (user may want to restore an empty tab they were about to use)
+7. **Tab restored, history cleared, then tab closed**: Creates a new history entry (the old entry no longer exists to update)

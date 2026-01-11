@@ -819,7 +819,7 @@ html, body {
 /* Developer metrics panel */
 #dev-metrics {
   position: fixed;
-  bottom: 16px;
+  bottom: 48px;
   left: 16px;
   background: var(--toggle-bg);
   border-radius: 6px;
@@ -857,5 +857,165 @@ html, body {
 .dev-metric-value {
   font-weight: 600;
   text-align: right;
+}
+
+/* History button */
+#history-btn {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  padding: 4px 10px;
+  font-family: Monaco, Menlo, monospace;
+  font-size: 11px;
+  color: var(--fg);
+  background: var(--toggle-bg);
+  border: none;
+  border-radius: 4px;
+  opacity: 0.5;
+  transition: opacity 0.3s ease, background 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+  z-index: 100;
+}
+
+#history-btn:hover {
+  background: var(--toggle-hover);
+  opacity: 1;
+}
+
+/* History overlay */
+#history-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(13, 13, 13, 0.95);
+  z-index: 200;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s;
+  overflow-y: auto;
+}
+
+#history-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* History grid */
+#history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Empty history message */
+.history-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 20px;
+  font-family: Monaco, Menlo, monospace;
+  font-size: 14px;
+  color: var(--fg);
+  opacity: 0.5;
+}
+
+/* History card */
+.history-card {
+  background: #1a1a1a;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 200px;
+  max-height: 300px;
+}
+
+.history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* History card header */
+.history-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #222;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.history-card-title {
+  font-family: Monaco, Menlo, monospace;
+  font-size: 11px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.history-card-title.untitled {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+.history-card-title.empty {
+  opacity: 0.4;
+  font-style: italic;
+}
+
+/* Just closed badge */
+.history-just-closed {
+  font-family: Monaco, Menlo, monospace;
+  font-size: 9px;
+  color: #0d0d0d;
+  background: #4a9;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+/* History card preview */
+.history-card-preview {
+  flex: 1;
+  overflow: hidden;
+  padding: 10px 12px;
+  min-height: 0;
+}
+
+.history-card-preview.empty-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-card-preview code {
+  display: block;
+  font-family: Monaco, Menlo, monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: hidden;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Override highlight.js backgrounds in cards */
+.history-card-preview code.hljs {
+  background: transparent !important;
+  padding: 0 !important;
 }
 

@@ -23,11 +23,98 @@ const HIGHLIGHT_KEY = 'blackboard-highlighting';
 const TABS_KEY = 'blackboard-tabs';
 const ACTIVE_TAB_KEY = 'blackboard-active-tab';
 const DEV_MODE_KEY = 'blackboard-dev-mode';
+const HISTORY_KEY = 'blackboard-history';
+
+// ===== HISTORY CONFIGURATION =====
+const HISTORY_MAX_ENTRIES = 100;
+const HISTORY_JUST_CLOSED_MS = 10000; // 10 seconds
+const HISTORY_MAX_PREVIEW_LINES = 50;
 
 // ===== PLATFORM DETECTION =====
 const isMac = process.platform === 'darwin';
 const formatHotkey = isMac ? '⌘F' : 'Ctrl+F';
 document.querySelectorAll('.format-hotkey').forEach(el => el.textContent = formatHotkey);
+
+// ===== HISTORY MANAGEMENT =====
+// Load history from localStorage
+function loadHistory() {
+  const stored = localStorage.getItem(HISTORY_KEY);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+}
+
+// Save history to localStorage
+function saveHistory() {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+// Add a closed tab to history
+function addToHistory(tab) {
+  const entry = {
+    id: 'history-' + Date.now(),
+    name: tab.name || '',
+    content: tab.content || '',
+    language: tab.language || null,
+    closedAt: Date.now()
+  };
+  
+  // Add to the beginning (most recent first)
+  history.unshift(entry);
+  
+  // Limit history size
+  if (history.length > HISTORY_MAX_ENTRIES) {
+    history = history.slice(0, HISTORY_MAX_ENTRIES);
+  }
+  
+  saveHistory();
+}
+
+// Restore a tab from history
+function restoreFromHistory(historyId) {
+  const entry = history.find(h => h.id === historyId);
+  if (!entry) return;
+  
+  // Save current tab content first
+  const currentTab = getActiveTab();
+  if (currentTab) {
+    currentTab.content = editor.value;
+    currentTab.language = manualLanguage;
+  }
+  
+  // Create new tab with restored content
+  const newId = 'tab-' + Date.now();
+  tabs.push({
+    id: newId,
+    name: entry.name,
+    content: entry.content,
+    language: entry.language
+  });
+  activeTabId = newId;
+  
+  // Update editor
+  editor.value = entry.content;
+  manualLanguage = entry.language;
+  if (manualLanguage) {
+    localStorage.setItem(LANG_KEY, manualLanguage);
+  } else {
+    localStorage.removeItem(LANG_KEY);
+  }
+  
+  saveTabs();
+  renderTabs();
+  applyHighlighting();
+  closeHistoryOverlay();
+  editor.focus();
+}
+
+// Initialize history
+let history = loadHistory();
 
 const tabBar = document.getElementById('tab-bar');
 const addTabBtn = document.getElementById('add-tab');
@@ -244,6 +331,15 @@ function closeTab(tabId) {
   
   const index = tabs.findIndex(t => t.id === tabId);
   if (index === -1) return;
+  
+  // Save to history before closing
+  const closingTab = tabs[index];
+  // If closing the active tab, make sure to capture current editor content
+  if (tabId === activeTabId) {
+    closingTab.content = editor.value;
+    closingTab.language = manualLanguage;
+  }
+  addToHistory(closingTab);
   
   tabs.splice(index, 1);
   
@@ -1152,12 +1248,24 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Close picker, tooltip, and help menu on escape
+// Close picker, tooltip, help menu, and history overlay on escape
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (historyOverlayOpen) {
+      closeHistoryOverlay();
+      return;
+    }
     closePicker();
     hideFormatterTooltip();
     helpMenu.classList.remove('open');
+  }
+});
+
+// Cmd/Ctrl+Shift+H to open history overlay
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'h') {
+    e.preventDefault();
+    toggleHistoryOverlay();
   }
 });
 
@@ -1480,6 +1588,153 @@ function syncScroll() {
 
 // Debounced language detection
 const debouncedDetect = debounce(detectAndHighlight, 300);
+
+// ===== HISTORY OVERLAY =====
+const historyBtn = document.getElementById('history-btn');
+const historyOverlay = document.getElementById('history-overlay');
+const historyGrid = document.getElementById('history-grid');
+let historyOverlayOpen = false;
+let historyOpenedAt = null; // Timestamp when overlay was opened (for "just closed" calculation)
+
+// Open history overlay
+function openHistoryOverlay() {
+  if (historyOverlayOpen) return;
+  historyOverlayOpen = true;
+  historyOpenedAt = Date.now();
+  renderHistoryCards();
+  historyOverlay.classList.add('open');
+}
+
+// Close history overlay
+function closeHistoryOverlay() {
+  if (!historyOverlayOpen) return;
+  historyOverlayOpen = false;
+  historyOverlay.classList.remove('open');
+}
+
+// Toggle history overlay
+function toggleHistoryOverlay() {
+  if (historyOverlayOpen) {
+    closeHistoryOverlay();
+  } else {
+    openHistoryOverlay();
+  }
+}
+
+// Render history cards
+function renderHistoryCards() {
+  historyGrid.innerHTML = '';
+  
+  if (history.length === 0) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'history-empty';
+    emptyMsg.textContent = 'No closed tabs yet';
+    historyGrid.appendChild(emptyMsg);
+    return;
+  }
+  
+  history.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'history-card';
+    card.dataset.historyId = entry.id;
+    
+    // Header with title and badge
+    const header = document.createElement('div');
+    header.className = 'history-card-header';
+    
+    // Title
+    const title = document.createElement('div');
+    title.className = 'history-card-title';
+    if (entry.name) {
+      title.textContent = entry.name;
+    } else if (!entry.content.trim()) {
+      title.textContent = 'Empty tab';
+      title.classList.add('empty');
+    } else {
+      title.textContent = 'Untitled';
+      title.classList.add('untitled');
+    }
+    header.appendChild(title);
+    
+    // "Just closed" badge
+    const timeSinceClosed = historyOpenedAt - entry.closedAt;
+    if (timeSinceClosed < HISTORY_JUST_CLOSED_MS) {
+      const badge = document.createElement('span');
+      badge.className = 'history-just-closed';
+      badge.textContent = 'just closed';
+      header.appendChild(badge);
+    }
+    
+    card.appendChild(header);
+    
+    // Content preview
+    const preview = document.createElement('div');
+    preview.className = 'history-card-preview';
+    
+    if (entry.content.trim()) {
+      const previewCode = document.createElement('code');
+      
+      // Limit to first 50 lines
+      const lines = entry.content.split('\n');
+      const truncatedContent = lines.slice(0, HISTORY_MAX_PREVIEW_LINES).join('\n');
+      const lineCount = Math.min(lines.length, HISTORY_MAX_PREVIEW_LINES);
+      
+      // Apply syntax highlighting if language is known
+      if (entry.language && entry.language !== 'plaintext') {
+        try {
+          const result = hljs.highlight(truncatedContent, { language: entry.language });
+          previewCode.innerHTML = result.value;
+          previewCode.className = `hljs language-${entry.language}`;
+        } catch (e) {
+          previewCode.textContent = truncatedContent;
+        }
+      } else {
+        // Try auto-detect for preview
+        try {
+          const result = hljs.highlightAuto(truncatedContent);
+          if (meetsConfidenceThreshold(result.relevance, truncatedContent) && result.language) {
+            previewCode.innerHTML = result.value;
+            previewCode.className = `hljs language-${result.language}`;
+          } else {
+            previewCode.textContent = truncatedContent;
+          }
+        } catch (e) {
+          previewCode.textContent = truncatedContent;
+        }
+      }
+      
+      preview.appendChild(previewCode);
+      
+      // Dynamic font sizing based on line count
+      // Fewer lines = larger font, more lines = smaller font
+      const baseFontSize = 10;
+      const minFontSize = 6;
+      const fontScale = Math.max(minFontSize, baseFontSize - Math.floor(lineCount / 10));
+      previewCode.style.fontSize = `${fontScale}px`;
+    } else {
+      preview.classList.add('empty-content');
+    }
+    
+    card.appendChild(preview);
+    
+    // Click handler to restore
+    card.addEventListener('click', () => {
+      restoreFromHistory(entry.id);
+    });
+    
+    historyGrid.appendChild(card);
+  });
+}
+
+// History button click handler
+historyBtn.addEventListener('click', toggleHistoryOverlay);
+
+// Close overlay when clicking outside cards
+historyOverlay.addEventListener('click', (e) => {
+  if (e.target === historyOverlay || e.target === historyGrid) {
+    closeHistoryOverlay();
+  }
+});
 
 // Initialize from active tab
 const initialTab = getActiveTab();

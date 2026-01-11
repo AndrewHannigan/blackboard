@@ -53,6 +53,7 @@
       <div class="help-shortcut"><span>Close tab</span><kbd>⌘W</kbd></div>
       <div class="help-shortcut"><span>Next tab</span><kbd>⌘<span class="shift">⇧</span>]</kbd></div>
       <div class="help-shortcut"><span>Previous tab</span><kbd>⌘<span class="shift">⇧</span>[</kbd></div>
+      <div class="help-shortcut"><span>Tab history</span><kbd>⌘<span class="shift">⇧</span>H</kbd></div>
       <div class="help-shortcut"><span>Format code</span><kbd>⌘F</kbd></div>
       <div class="help-shortcut"><span>Toggle syntax</span><kbd>⌘J</kbd></div>
       <div class="help-shortcut"><span>Developer mode</span><kbd>⌘D</kbd></div>
@@ -72,6 +73,14 @@
     </div>
   </div>
   <div id="formatter-tooltip" class="formatter-tooltip"></div>
+  <!-- History button (bottom-left) -->
+  <button id="history-btn" title="History (⌘⇧H)">history</button>
+  
+  <!-- History overlay -->
+  <div id="history-overlay">
+    <div id="history-grid"></div>
+  </div>
+  
   <div id="dev-metrics">
     <div class="dev-metric">
       <span class="dev-metric-label">language</span>
