@@ -54,18 +54,37 @@ function saveHistory() {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
 }
 
-// Add a closed tab to history
+// Add a closed tab to history (or update existing entry if tab was previously restored)
 function addToHistory(tab) {
-  const entry = {
-    id: 'history-' + Date.now(),
-    name: tab.name || '',
-    content: tab.content || '',
-    language: tab.language || null,
-    closedAt: Date.now()
-  };
+  const now = Date.now();
   
-  // Add to the beginning (most recent first)
-  history.unshift(entry);
+  // Check if this tab already exists in history (was previously restored and is now being closed again)
+  const existingIndex = history.findIndex(h => h.id === tab.id);
+  
+  if (existingIndex !== -1) {
+    // Update existing entry and move to top
+    const existingEntry = history[existingIndex];
+    existingEntry.name = tab.name || '';
+    existingEntry.content = tab.content || '';
+    existingEntry.language = tab.language || null;
+    existingEntry.closedAt = now;
+    
+    // Remove from current position and add to beginning
+    history.splice(existingIndex, 1);
+    history.unshift(existingEntry);
+  } else {
+    // Create new entry with the tab's own ID (persistent identity)
+    const entry = {
+      id: tab.id,
+      name: tab.name || '',
+      content: tab.content || '',
+      language: tab.language || null,
+      closedAt: now
+    };
+    
+    // Add to the beginning (most recent first)
+    history.unshift(entry);
+  }
   
   // Limit history size
   if (history.length > HISTORY_MAX_ENTRIES) {
@@ -75,10 +94,12 @@ function addToHistory(tab) {
   saveHistory();
 }
 
-// Restore a tab from history
+// Restore a tab from history (reopens it with the same identity)
 function restoreFromHistory(historyId) {
-  const entry = history.find(h => h.id === historyId);
-  if (!entry) return;
+  const entryIndex = history.findIndex(h => h.id === historyId);
+  if (entryIndex === -1) return;
+  
+  const entry = history[entryIndex];
   
   // Save current tab content first
   const currentTab = getActiveTab();
@@ -87,15 +108,18 @@ function restoreFromHistory(historyId) {
     currentTab.language = manualLanguage;
   }
   
-  // Create new tab with restored content
-  const newId = 'tab-' + Date.now();
+  // Restore tab with the same ID it had before (persistent identity)
   tabs.push({
-    id: newId,
+    id: entry.id,
     name: entry.name,
     content: entry.content,
     language: entry.language
   });
-  activeTabId = newId;
+  activeTabId = entry.id;
+  
+  // Remove from history (it's now an open tab again)
+  history.splice(entryIndex, 1);
+  saveHistory();
   
   // Update editor
   editor.value = entry.content;
@@ -332,14 +356,18 @@ function closeTab(tabId) {
   const index = tabs.findIndex(t => t.id === tabId);
   if (index === -1) return;
   
-  // Save to history before closing
+  // Get the tab being closed
   const closingTab = tabs[index];
   // If closing the active tab, make sure to capture current editor content
   if (tabId === activeTabId) {
     closingTab.content = editor.value;
     closingTab.language = manualLanguage;
   }
-  addToHistory(closingTab);
+  
+  // Only save to history if tab has non-empty content (not just whitespace)
+  if (closingTab.content && closingTab.content.trim()) {
+    addToHistory(closingTab);
+  }
   
   tabs.splice(index, 1);
   
@@ -1621,6 +1649,16 @@ function toggleHistoryOverlay() {
   }
 }
 
+// Delete an entry from history permanently
+function deleteFromHistory(historyId) {
+  const entryIndex = history.findIndex(h => h.id === historyId);
+  if (entryIndex === -1) return;
+  
+  history.splice(entryIndex, 1);
+  saveHistory();
+  renderHistoryCards();
+}
+
 // Render history cards
 function renderHistoryCards() {
   historyGrid.innerHTML = '';
@@ -1664,6 +1702,17 @@ function renderHistoryCards() {
       badge.textContent = 'just closed';
       header.appendChild(badge);
     }
+    
+    // Delete button
+    const deleteBtn = document.createElement('span');
+    deleteBtn.className = 'history-card-delete';
+    deleteBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+    deleteBtn.title = 'Delete from history';
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteFromHistory(entry.id);
+    });
+    header.appendChild(deleteBtn);
     
     card.appendChild(header);
     

@@ -986,6 +986,35 @@ html, body {
   font-weight: 600;
 }
 
+/* History card delete button */
+.history-card-delete {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.1s ease, background 0.1s ease;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.history-card:hover .history-card-delete {
+  opacity: 0.5;
+}
+
+.history-card-delete:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.history-card-delete svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
 /* History card preview */
 .history-card-preview {
   flex: 1;

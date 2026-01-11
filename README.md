@@ -40,5 +40,6 @@ brew install --cask andrewhannigan/tap/blackboard
 - **Sub-100ms startup** — No framework, no virtual DOM, no build step. Just vanilla JS over Electron. The window shows the moment it's ready.
 - **Lazy-loaded formatters** — Prettier plugins load on first format, not on boot. Cold start stays snappy.
 - **Tabs** — Drag to reorder. Double-click to rename. Hidden until you need them.
+- **Tab history** — Closed tabs live on. Hit ⌘⇧H to browse a grid of syntax-highlighted previews, click to restore.
 
 
