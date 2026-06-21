@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-mac:
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
 
   build-linux:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,7 +104,7 @@ jobs:
   release:
     needs: [build-mac, build-windows, build-linux]
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -135,48 +135,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Homebrew Tap
-        env:
-          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          ZIP_FILE="dist/Blackboard-${VERSION}-arm64.zip"
-          
-          # Calculate SHA256 for the zip (homebrew cask uses zip)
-          SHA256=$(shasum -a 256 "$ZIP_FILE" | awk '{print $1}')
-          
-          # Clone the tap repo
-          git clone https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/${{ github.repository_owner }}/homebrew-tap.git tap-repo
-          cd tap-repo
-          
-          # Update the cask formula
-          cat > Casks/blackboard.rb << 'CASKEOF'
-          cask "blackboard" do
-            version "VERSION_PLACEHOLDER"
-            sha256 "SHA256_PLACEHOLDER"
-          
-            url "https://github.com/AndrewHannigan/blackboard/releases/download/v#{version}/Blackboard-#{version}-arm64.zip"
-            name "Blackboard"
-            desc "Minimal scratch text editor"
-            homepage "https://github.com/AndrewHannigan/blackboard"
-          
-            app "Blackboard.app"
-            binary "#{appdir}/Blackboard.app/Contents/Resources/app.asar.unpacked/bin/bb"
-          
-            zap trash: [
-              "~/Library/Application Support/Blackboard",
-              "~/Library/Preferences/com.blackboard.app.plist",
-            ]
-          end
-          CASKEOF
-          
-          # Replace placeholders with actual values
-          sed -i "s/VERSION_PLACEHOLDER/${VERSION}/g" Casks/blackboard.rb
-          sed -i "s/SHA256_PLACEHOLDER/${SHA256}/g" Casks/blackboard.rb
-          
-          # Commit and push
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/blackboard.rb
-          git commit -m "Update blackboard to v${VERSION}"
-          git push
+      # NOTE: The Homebrew cask in AndrewHannigan/homebrew-tap is intentionally
+      # NOT updated here. Pushing to that separate repo would require a
+      # cross-repo PAT (TAP_GITHUB_TOKEN), which kept expiring and failing the
+      # release. The tap is updated manually after each release instead — see
+      # the release-blackboard skill for the exact steps.
