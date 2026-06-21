@@ -613,6 +613,16 @@ function applyAutolinker(text) {
   return autolinker.link(escaped);
 }
 
+// Wrap trailing whitespace (spaces/tabs at the end of a line) in a styled span
+// so it gets a faint marker. Trailing whitespace is otherwise invisible, which
+// makes the caret look misplaced: clicking past a line drops the caret after
+// the spaces, so it appears to float in empty space to the right of the text.
+// Width-preserving — only adds a span, so the overlay still matches the
+// textarea exactly and the caret stays aligned.
+function markTrailingWhitespace(html) {
+  return html.replace(/([ \t]+)(?=\n|$)/g, '<span class="trailing-ws">$1</span>');
+}
+
 // Update pointer-events on highlight layer based on whether we have links
 function updateHighlightLayerPointerEvents() {
   const hasLinks = highlightLayer.querySelector('a.autolink') !== null;
@@ -665,7 +675,7 @@ function renderContent() {
     return;
   }
 
-  highlightLayer.innerHTML = applyAutolinker(text);
+  highlightLayer.innerHTML = markTrailingWhitespace(applyAutolinker(text));
   updateHighlightLayerPointerEvents();
 }
 
