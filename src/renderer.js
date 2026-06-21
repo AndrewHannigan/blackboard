@@ -876,6 +876,15 @@ editor.addEventListener('input', () => {
   // Also save to legacy key for compatibility with CLI
   localStorage.setItem(KEY, editor.value);
   renderContent();
+  // Typing scrolls the textarea to keep the caret in view, but that
+  // caret-driven scroll doesn't reliably fire a 'scroll' event, so the
+  // highlight layer would lag a line behind the caret. Sync it explicitly
+  // (now and after layout settles on the next frame).
+  syncScroll();
+  requestAnimationFrame(syncScroll);
 });
 
 editor.addEventListener('scroll', syncScroll);
+// Keyboard caret moves (arrows, page up/down, home/end) can also scroll the
+// textarea without firing 'scroll'; keep the layers aligned afterwards.
+editor.addEventListener('keyup', () => requestAnimationFrame(syncScroll));
