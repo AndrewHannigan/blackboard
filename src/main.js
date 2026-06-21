@@ -152,16 +152,6 @@ function createMenu() {
       submenu: [
         { role: 'about' },
         { type: 'separator' },
-        {
-          label: 'Settings...',
-          accelerator: 'CmdOrCtrl+,',
-          click: () => {
-            if (mainWindow && !mainWindow.isDestroyed()) {
-              mainWindow.webContents.send('open-settings');
-            }
-          }
-        },
-        { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
         { role: 'hide' },
@@ -195,17 +185,7 @@ function createMenu() {
         ] : [
           { role: 'delete' },
           { type: 'separator' },
-          { role: 'selectAll' },
-          { type: 'separator' },
-          {
-            label: 'Settings',
-            accelerator: 'CmdOrCtrl+,',
-            click: () => {
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('open-settings');
-              }
-            }
-          }
+          { role: 'selectAll' }
         ])
       ]
     },

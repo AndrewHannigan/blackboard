@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Blackboard</title>
-  <link rel="stylesheet" href="../node_modules/highlight.js/styles/github-dark.css">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -18,32 +17,8 @@
     </div>
   </div>
   <div id="status-bar">
-    <button id="ruff-format" title="Format with Ruff">
-      <span>format w/ ruff</span>
-      <kbd class="format-hotkey"></kbd>
-    </button>
-    <button id="sql-format" title="Format with sqlformat">
-      <span>format w/ sqlformat</span>
-      <kbd class="format-hotkey"></kbd>
-    </button>
-    <button id="prettier-format" title="Format with Prettier">
-      <span>format w/ prettier</span>
-      <kbd class="format-hotkey"></kbd>
-    </button>
-    <button id="highlight-toggle" title="Toggle syntax highlighting (⌘J)">
-      <span>syntax on</span>
-      <kbd>⌘J</kbd>
-    </button>
-    <div id="language-indicator" title="Change language">plaintext</div>
     <button id="help-btn" title="Help">?</button>
   </div>
-  <div id="settings-menu">
-    <div class="settings-item" id="dev-mode-toggle">
-      <span>Developer Mode</span>
-      <div class="settings-toggle"></div>
-    </div>
-  </div>
-  <div id="language-picker"></div>
   <div id="help-menu">
     <div class="help-title">Blackboard</div>
     <div class="help-subtitle">A minimal scratchpad for code and thoughts</div>
@@ -54,73 +29,22 @@
       <div class="help-shortcut"><span>Next tab</span><kbd>⌘<span class="shift">⇧</span>]</kbd></div>
       <div class="help-shortcut"><span>Previous tab</span><kbd>⌘<span class="shift">⇧</span>[</kbd></div>
       <div class="help-shortcut"><span>Tab history</span><kbd>⌘<span class="shift">⇧</span>H</kbd></div>
-      <div class="help-shortcut"><span>Format code</span><kbd>⌘F</kbd></div>
-      <div class="help-shortcut"><span>Toggle syntax</span><kbd>⌘J</kbd></div>
-      <div class="help-shortcut"><span>Developer mode</span><kbd>⌘D</kbd></div>
-      <div class="help-shortcut"><span>Settings</span><kbd>⌘,</kbd></div>
     </div>
     <div class="help-section">
       <div class="help-section-title">Tips</div>
       <div class="help-tip">• Double-click a tab to rename it</div>
-      <div class="help-tip">• Click the language indicator to manually set language</div>
-      <div class="help-tip">• ⌘+click on URLs/emails/phones in plaintext to open them</div>
-    </div>
-    <div class="help-section">
-      <div class="help-section-title">Formatting</div>
-      <div class="help-tip">• JS/TS/JSON/HTML/CSS/YAML: uses Prettier</div>
-      <div class="help-tip">• Python: uses ruff (if <a href="https://docs.astral.sh/ruff/installation/">installed</a>)</div>
-      <div class="help-tip">• SQL: uses sqlformat (if <a href="https://pypi.org/project/sqlparse/">installed</a>)</div>
+      <div class="help-tip">• ⌘+click on URLs/emails/phones to open them</div>
     </div>
   </div>
-  <div id="formatter-tooltip" class="formatter-tooltip"></div>
   <!-- History button (bottom-left) -->
   <button id="history-btn" title="History (⌘⇧H)">
     <span>history</span>
     <kbd class="history-hotkey"></kbd>
   </button>
-  
+
   <!-- History overlay -->
   <div id="history-overlay">
     <div id="history-grid"></div>
-  </div>
-  
-  <div id="dev-metrics">
-    <div class="dev-metric">
-      <span class="dev-metric-label">language</span>
-      <span class="dev-metric-value" id="metric-language">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">relevance</span>
-      <span class="dev-metric-value" id="metric-relevance">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">per char</span>
-      <span class="dev-metric-value" id="metric-per-char">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">threshold</span>
-      <span class="dev-metric-value" id="metric-threshold">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">2nd best</span>
-      <span class="dev-metric-value" id="metric-second-best">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">2nd rel</span>
-      <span class="dev-metric-value" id="metric-second-relevance">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">2nd/char</span>
-      <span class="dev-metric-value" id="metric-second-per-char">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">illegal</span>
-      <span class="dev-metric-value" id="metric-illegal">—</span>
-    </div>
-    <div class="dev-metric">
-      <span class="dev-metric-label">chars</span>
-      <span class="dev-metric-value" id="metric-chars">—</span>
-    </div>
   </div>
   <script src="./renderer.js"></script>
 </body>
