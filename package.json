@@ -1,6 +1,6 @@
 {
   "name": "blackboard",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "description": "The minimum text editor.",
   "main": "src/main.js",
   "bin": {
