@@ -33,13 +33,10 @@ brew install --cask andrewhannigan/tap/blackboard
 
 ## Features
 
-- **Confidence-based syntax highlighting** — Language detection that only kicks in when it's sure. Tuned relevance thresholds prevent false positives so your grocery list doesn't turn into C++.
-- **One-keystroke formatting** — Ruff for Python, sqlformat for SQL, Prettier (bundled) for JS/TS/JSON/HTML/CSS/Markdown/YAML. Just hit ⌘F.
-- **Clickable links** — URLs, emails, and phone numbers are auto-detected in plaintext. ⌘+Click to open.
+- **Clickable links** — URLs, emails, and phone numbers are auto-detected. ⌘+Click to open.
 - **CLI integration** — Pipe anything to your blackboard with `echo "hello" | bb`. A local HTTP server syncs content instantly.
 - **Sub-100ms startup** — No framework, no virtual DOM, no build step. Just vanilla JS over Electron. The window shows the moment it's ready.
-- **Lazy-loaded formatters** — Prettier plugins load on first format, not on boot. Cold start stays snappy.
 - **Tabs** — Drag to reorder. Double-click to rename. Hidden until you need them.
-- **Tab history** — Closed tabs live on. Hit ⌘⇧H to browse a grid of syntax-highlighted previews, click to restore.
+- **Tab history** — Closed tabs live on. Hit ⌘⇧H to browse a grid of previews, click to restore.
 
 
