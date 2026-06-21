@@ -257,6 +257,13 @@ html, body {
   overflow-wrap: break-word;
 }
 
+/* Faint marker for trailing whitespace so it isn't invisible. Background only,
+   so it never changes glyph widths and the caret stays aligned with the text. */
+#highlight-layer .trailing-ws {
+  background-color: rgba(224, 224, 224, 0.14);
+  border-radius: 2px;
+}
+
 /* Status bar container */
 #status-bar {
   position: fixed;
