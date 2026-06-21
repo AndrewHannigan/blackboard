@@ -884,6 +884,15 @@ editor.addEventListener('input', () => {
   requestAnimationFrame(syncScroll);
 });
 
+// Tab inserts two spaces instead of moving focus out of the editor.
+editor.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  e.preventDefault();
+  // execCommand keeps the native undo stack intact and fires an 'input'
+  // event, so the existing input handler persists and re-renders.
+  document.execCommand('insertText', false, '  ');
+});
+
 editor.addEventListener('scroll', syncScroll);
 // Keyboard caret moves (arrows, page up/down, home/end) can also scroll the
 // textarea without firing 'scroll'; keep the layers aligned afterwards.
