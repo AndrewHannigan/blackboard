@@ -1,6 +1,10 @@
 :root {
   --bg: #0d0d0d;
   --fg: #e0e0e0;
+  /* Black bar at the bottom of the window reserved for the floating history
+     button (bottom-left) and status controls (bottom-right). The editor
+     viewport ends above it, so text never renders behind those buttons. */
+  --bottom-bar: 56px;
   --toggle-bg: #2a2a2a;
   --toggle-hover: #3a3a3a;
   --tab-border: #333;
@@ -171,6 +175,10 @@ html, body {
   width: 100%;
   flex: 1;
   min-height: 0;
+  /* Shrink the whole editor viewport (both the textarea and the highlight
+     layer fill it) so it ends above the floating bottom buttons. Shrinking
+     both layers together keeps the caret and the highlighted text in sync. */
+  margin-bottom: var(--bottom-bar);
 }
 
 #editor, #highlight-layer {
