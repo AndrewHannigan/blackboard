@@ -7,16 +7,16 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)](https://github.com/AndrewHannigan/blackboard/releases)
 [![GitHub Downloads](https://img.shields.io/github/downloads/AndrewHannigan/blackboard/total?color=green)](https://github.com/AndrewHannigan/blackboard/releases)
 
-Blackboard is a minimal scratchpad for code and thoughts.
+Blackboard is the minimum scratchpad for text.
 
-There's no save mechanism. Text just persists between sessions.
+In Blackboard, there is no save mechanism. Text just persists between sessions.
 
-Write a SQL snippet, draft a slack message, tweak a unix command, etc.
+Write a meeting note, draft a slack message, tweak a unix command, etc.
 
 No startup menus.  
 No exit confirmations.  
-No "unsaved" dot.  
-No syncing.  
+No "unsaved" dot.
+No syncing.
 
 Just a little blackboard that's always the way you left it.
 
